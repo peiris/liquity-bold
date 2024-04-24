@@ -5,6 +5,7 @@ const testHelpers = require("../utils/testHelpers.js");
 const { createDeployAndFundFixture } = require("../utils/testFixtures.js");
 const TroveManagerTester = artifacts.require("./TroveManagerTester.sol");
 const LiquityMathTester = artifacts.require("./LiquityMathTester.sol");
+const ERC20 = artifacts.require("./ERC20MinterMock.sol");
 
 const th = testHelpers.TestHelper;
 const timeValues = testHelpers.TimeValues;
@@ -332,7 +333,8 @@ contract("Fee arithmetic tests", async (accounts) => {
 
   const deployFixture = createDeployAndFundFixture({
     callback: async () => {
-      const troveManagerTester = await TroveManagerTester.new();
+      const WETH = await ERC20.new("WETH", "WETH");
+      const troveManagerTester = await TroveManagerTester.new(WETH.address);
       TroveManagerTester.setAsDeployed(troveManagerTester);
 
       const mathTester = await LiquityMathTester.new();

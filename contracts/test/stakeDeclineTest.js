@@ -30,8 +30,6 @@ contract("TroveManager", async (accounts) => {
   let borrowerOperations;
   let hintHelpers;
 
-  const getOpenTroveBoldAmount = async (totalDebt) => th.getOpenTroveBoldAmount(contracts, totalDebt);
-
   const getSnapshotsRatio = async () => {
     const ratio = (await troveManager.totalStakesSnapshot())
       .mul(toBN(dec(1, 18)))
@@ -67,7 +65,7 @@ contract("TroveManager", async (accounts) => {
     const ATroveId = await th.openTroveWrapper(
       contracts,
       th._100pct,
-      await getOpenTroveBoldAmount(dec(1, 31)),
+      dec(1, 31),
       ZERO_ADDRESS,
       ZERO_ADDRESS,
       0,
@@ -78,7 +76,7 @@ contract("TroveManager", async (accounts) => {
     const BTroveId = await th.openTroveWrapper(
       contracts,
       th._100pct,
-      await getOpenTroveBoldAmount(dec(2, 30)),
+      dec(2, 30),
       ZERO_ADDRESS,
       ZERO_ADDRESS,
       0,
@@ -87,7 +85,7 @@ contract("TroveManager", async (accounts) => {
     await th.openTroveWrapper(
       contracts,
       th._100pct,
-      await getOpenTroveBoldAmount(dec(2, 30)),
+      dec(2, 30),
       ZERO_ADDRESS,
       ZERO_ADDRESS,
       0,
@@ -96,7 +94,7 @@ contract("TroveManager", async (accounts) => {
     await th.openTroveWrapper(
       contracts,
       th._100pct,
-      await getOpenTroveBoldAmount(dec(2, 30)),
+      dec(2, 30),
       ZERO_ADDRESS,
       ZERO_ADDRESS,
       0,
@@ -105,7 +103,7 @@ contract("TroveManager", async (accounts) => {
     await th.openTroveWrapper(
       contracts,
       th._100pct,
-      await getOpenTroveBoldAmount(dec(2, 30)),
+      dec(2, 30),
       ZERO_ADDRESS,
       ZERO_ADDRESS,
       0,
@@ -114,7 +112,7 @@ contract("TroveManager", async (accounts) => {
     await th.openTroveWrapper(
       contracts,
       th._100pct,
-      await getOpenTroveBoldAmount(dec(2, 30)),
+      dec(2, 30),
       ZERO_ADDRESS,
       ZERO_ADDRESS,
       0,
@@ -124,12 +122,13 @@ contract("TroveManager", async (accounts) => {
     // Make 10 tiny troves at relatively negligible collateral (~1e-9 of total)
     const tinyTroves = accounts.slice(10, 20);
     const eth_amount = dec(2, 20);
+    const COLL_GASPOOL_COMPENSATION = await borrowerOperations.COLL_GASPOOL_COMPENSATION();
     for (const account of tinyTroves) {
-      await contracts.WETH.mint(account, eth_amount);
+      await contracts.WETH.mint(account, eth_amount.add(COLL_GASPOOL_COMPENSATION));
       await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(1, 22)),
+        dec(1, 22),
         ZERO_ADDRESS,
         ZERO_ADDRESS,
         0,

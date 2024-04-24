@@ -26,12 +26,12 @@ contract LiquityBase is BaseMath, ILiquityBase {
     // Critical system collateral ratio. If the system's total collateral ratio (TCR) falls below the CCR, Recovery Mode is triggered.
     uint256 public constant CCR = 1500000000000000000; // 150%
 
-    // Amount of Bold to be locked in gas pool on opening troves
-    uint256 public constant BOLD_GAS_COMPENSATION = 200e18;
-
-    // Minimum amount of net Bold debt a trove must have
-    uint256 public constant MIN_NET_DEBT = 1800e18;
-    // uint constant public MIN_NET_DEBT = 0;
+    // Minimum amount of collateral a trove must have
+    uint256 public constant MIN_COLL = 3e18; // 3 ETH
+    // Amount of collateral to be locked in gas pool on opening troves
+    uint256 public constant COLL_GASPOOL_COMPENSATION = 3e17; // 0.3 ETH
+    // Below this amount, troves will be tagged as zombi and removed from Sorted List
+    uint256 public constant MIN_REDEMPTION_DEBT = 2000e18; // 2k Bold
 
     uint256 public constant MAX_ANNUAL_INTEREST_RATE = 1e18; // 100%
 
@@ -46,15 +46,6 @@ contract LiquityBase is BaseMath, ILiquityBase {
     IPriceFeed public override priceFeed;
 
     // --- Gas compensation functions ---
-
-    // Returns the composite debt (drawn debt + gas compensation) of a trove, for the purpose of ICR calculation
-    function _getCompositeDebt(uint256 _debt) internal pure returns (uint256) {
-        return _debt + BOLD_GAS_COMPENSATION;
-    }
-
-    function _getNetDebt(uint256 _debt) internal pure returns (uint256) {
-        return _debt - BOLD_GAS_COMPENSATION;
-    }
 
     // Return the amount of ETH to be drawn from a trove's collateral and sent as gas compensation.
     function _getCollGasCompensation(uint256 _entireColl) internal pure returns (uint256) {

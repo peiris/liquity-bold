@@ -47,7 +47,7 @@ contract("All Liquity functions with onlyOwner modifier", async (accounts) => {
   };
 
   const testSetAddresses = async (contract, numberOfAddresses) => {
-    const dumbContract = await GasPool.new();
+    const dumbContract = await GasPool.new(contracts.WETH.address, contracts.borrowerOperations.address, contracts.troveManager.address);
     const params = Array(numberOfAddresses).fill(dumbContract.address);
 
     // Attempt call from alice
@@ -97,7 +97,7 @@ contract("All Liquity functions with onlyOwner modifier", async (accounts) => {
 
   describe("SortedTroves", async (accounts) => {
     it("setAddresses(): reverts when called by non-owner, with wrong addresses, or twice", async () => {
-      const dumbContract = await GasPool.new();
+      const dumbContract = await GasPool.new(contracts.WETH.address, contracts.borrowerOperations.address, contracts.troveManager.address);
       const params = [dumbContract.address, dumbContract.address];
 
       // Attempt call from alice

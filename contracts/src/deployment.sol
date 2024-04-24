@@ -43,15 +43,16 @@ function _deployAndConnectContracts() returns (LiquityContracts memory contracts
     // TODO: optimize deployment order & constructor args & connector functions
 
     // Deploy all contracts
+    // TODO: switch constructor args to IERC20
     contracts.activePool = new ActivePool(address(contracts.WETH));
     contracts.borrowerOperations = new BorrowerOperations(address(contracts.WETH));
     contracts.collSurplusPool = new CollSurplusPool(address(contracts.WETH));
     contracts.defaultPool = new DefaultPool(address(contracts.WETH));
-    contracts.gasPool = new GasPool();
     contracts.priceFeed = new PriceFeedTestnet();
     contracts.sortedTroves = new SortedTroves();
     contracts.stabilityPool = new StabilityPool(address(contracts.WETH));
-    contracts.troveManager = new TroveManager();
+    contracts.troveManager = new TroveManager(contracts.WETH);
+    contracts.gasPool = new GasPool(contracts.WETH, contracts.borrowerOperations, contracts.troveManager);
     contracts.interestRouter = new MockInterestRouter();
 
     contracts.boldToken = new BoldToken(

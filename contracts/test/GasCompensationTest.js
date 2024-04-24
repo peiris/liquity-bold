@@ -45,7 +45,6 @@ contract("Gas compensation tests", async (accounts) => {
   let troveManagerTester;
   let borrowerOperationsTester;
 
-  const getOpenTroveBoldAmount = async (totalDebt) => th.getOpenTroveBoldAmount(contracts, totalDebt);
   const openTrove = async (params) => th.openTrove(contracts, params);
 
   const logICRs = (ICRList) => {
@@ -60,8 +59,8 @@ contract("Gas compensation tests", async (accounts) => {
   });
 
   before(async () => {
-    troveManagerTester = await TroveManagerTester.new();
     const WETH = await ERC20.new("WETH", "WETH");
+    troveManagerTester = await TroveManagerTester.new(WETH.address);
     borrowerOperationsTester = await BorrowerOperationsTester.new(WETH.address);
 
     TroveManagerTester.setAsDeployed(troveManagerTester);
@@ -224,125 +223,6 @@ contract("Gas compensation tests", async (accounts) => {
       )
     ).toString();
     assert.equal(gasCompensation_5, "1500000000000000000000000");
-  });
-
-  // --- Composite debt calculations ---
-
-  // gets debt + 50 when 0.5% of coll < $10
-  it("_getCompositeDebt(): returns (debt + 50) when collateral < $10 in value", async () => {
-    const price = await priceFeed.getPrice();
-    assert.equal(price, dec(200, 18));
-
-    /*
-    ETH:USD price = 200
-    coll = 9.999 ETH
-    debt = 10 Bold
-    0.5% of coll = 0.04995 ETH. USD value: $9.99
-    -> Expect composite debt = 10 + 200  = 2100 Bold*/
-    const compositeDebt_1 = await troveManagerTester.getCompositeDebt(
-      dec(10, 18),
-    );
-    assert.equal(compositeDebt_1, dec(210, 18));
-
-    /* ETH:USD price = 200
-     coll = 0.055 ETH
-     debt = 0 Bold
-     0.5% of coll = 0.000275 ETH. USD value: $0.055
-     -> Expect composite debt = 0 + 200 = 200 Bold*/
-    const compositeDebt_2 = await troveManagerTester.getCompositeDebt(0);
-    assert.equal(compositeDebt_2, dec(200, 18));
-
-    // /* ETH:USD price = 200
-    // coll = 6.09232408808723580 ETH
-    // debt = 200 Bold
-    // 0.5% of coll = 0.004995 ETH. USD value: $6.09
-    // -> Expect  composite debt =  200 + 200 = 400  Bold */
-    const compositeDebt_3 = await troveManagerTester.getCompositeDebt(
-      dec(200, 18),
-    );
-    assert.equal(compositeDebt_3, "400000000000000000000");
-  });
-
-  // returns $10 worth of ETH when 0.5% of coll == $10
-  it("getCompositeDebt(): returns (debt + 50) collateral = $10 in value", async () => {
-    const price = await priceFeed.getPrice();
-    assert.equal(price, dec(200, 18));
-
-    /*
-    ETH:USD price = 200
-    coll = 10 ETH
-    debt = 123.45 Bold
-    0.5% of coll = 0.5 ETH. USD value: $10
-    -> Expect composite debt = (123.45 + 200) = 323.45 Bold  */
-    const compositeDebt = await troveManagerTester.getCompositeDebt(
-      "123450000000000000000",
-    );
-    assert.equal(compositeDebt, "323450000000000000000");
-  });
-
-  /// ***
-
-  // gets debt + 50 when 0.5% of coll > 10
-  it("getCompositeDebt(): returns (debt + 50) when 0.5% of collateral > $10 in value", async () => {
-    const price = await priceFeed.getPrice();
-    assert.equal(price, dec(200, 18));
-
-    /*
-    ETH:USD price = 200 $/E
-    coll = 100 ETH
-    debt = 2000 Bold
-    -> Expect composite debt = (2000 + 200) = 2200 Bold  */
-    const compositeDebt_1 = (
-      await troveManagerTester.getCompositeDebt(dec(2000, 18))
-    ).toString();
-    assert.equal(compositeDebt_1, "2200000000000000000000");
-
-    /*
-    ETH:USD price = 200 $/E
-    coll = 10.001 ETH
-    debt = 200 Bold
-    -> Expect composite debt = (200 + 200) = 400 Bold  */
-    const compositeDebt_2 = (
-      await troveManagerTester.getCompositeDebt(dec(200, 18))
-    ).toString();
-    assert.equal(compositeDebt_2, "400000000000000000000");
-
-    /*
-    ETH:USD price = 200 $/E
-    coll = 37.5 ETH
-    debt = 500 Bold
-    -> Expect composite debt = (500 + 200) = 700 Bold  */
-    const compositeDebt_3 = (
-      await troveManagerTester.getCompositeDebt(dec(500, 18))
-    ).toString();
-    assert.equal(compositeDebt_3, "700000000000000000000");
-
-    /*
-    ETH:USD price = 45323.54542 $/E
-    coll = 94758.230582309850 ETH
-    debt = 1 billion Bold
-    -> Expect composite debt = (1000000000 + 200) = 1000000200 Bold  */
-    await priceFeed.setPrice("45323545420000000000000");
-    const price_2 = await priceFeed.getPrice();
-    const compositeDebt_4 = (
-      await troveManagerTester.getCompositeDebt(dec(1, 27))
-    ).toString();
-    assert.isAtMost(
-      th.getDifference(compositeDebt_4, "1000000200000000000000000000"),
-      100000000000,
-    );
-
-    /*
-    ETH:USD price = 1000000 $/E (1 million)
-    coll = 300000000 ETH   (300 million)
-    debt = 54321.123456789 Bold
-   -> Expect composite debt = (54321.123456789 + 200) = 54521.123456789 Bold */
-    await priceFeed.setPrice(dec(1, 24));
-    const price_3 = await priceFeed.getPrice();
-    const compositeDebt_5 = (
-      await troveManagerTester.getCompositeDebt("54321123456789000000000")
-    ).toString();
-    assert.equal(compositeDebt_5, "54521123456789000000000");
   });
 
   // --- Test ICRs with virtual debt ---

@@ -22,7 +22,6 @@ contract("CollSurplusPool", async (accounts) => {
   let collSurplusPool;
   let priceFeed;
 
-  const getOpenTroveBoldAmount = async (totalDebt) => th.getOpenTroveBoldAmount(contracts, totalDebt);
   const openTrove = async (params) => th.openTrove(contracts, params);
 
   const deployFixture = createDeployAndFundFixture({

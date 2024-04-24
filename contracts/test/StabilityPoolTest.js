@@ -61,7 +61,6 @@ contract("StabilityPool", async (accounts) => {
   let defaultPool;
   let borrowerOperations;
 
-  const getOpenTroveBoldAmount = async (totalDebt) => th.getOpenTroveBoldAmount(contracts, totalDebt);
   const openTrove = async (params) => th.openTrove(contracts, params);
   const assertRevert = th.assertRevert;
 
@@ -1752,7 +1751,7 @@ contract("StabilityPool", async (accounts) => {
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -2550,7 +2549,7 @@ contract("StabilityPool", async (accounts) => {
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,

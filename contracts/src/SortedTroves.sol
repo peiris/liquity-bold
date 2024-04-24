@@ -141,7 +141,7 @@ contract SortedTroves is Ownable, CheckContract, ISortedTroves {
      * @param _nextId Id of next Trove for the insert position
      */
     function insert(uint256 _id, uint256 _annualInterestRate, uint256 _prevId, uint256 _nextId) external override {
-        _requireCallerIsBorrowerOperations();
+        _requireCallerIsTroveManager();
         require(!contains(_id), "SortedTroves: List already contains the node");
         require(_id != ROOT_NODE_ID, "SortedTroves: _id cannot be the root node's ID");
 

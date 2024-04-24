@@ -301,21 +301,6 @@ class TestHelper {
 
   // --- Gas compensation calculation functions ---
 
-  // Given a composite debt, returns the actual debt  - i.e. subtracts the virtual debt.
-  // Virtual debt = 50 Bold.
-  static async getActualDebtFromComposite(compositeDebt, contracts) {
-    const issuedDebt = await contracts.troveManager.getActualDebtFromComposite(
-      compositeDebt,
-    );
-    return issuedDebt;
-  }
-
-  // Adds the gas compensation (50 Bold)
-  static async getCompositeDebt(contracts, debt) {
-    const compositeDebt = contracts.borrowerOperations.getCompositeDebt(debt);
-    return compositeDebt;
-  }
-
   static async getTroveEntireCollByAddress(contracts, account) {
     return await this.getTroveEntireColl(contracts, this.addressToTroveId(account));
   }
@@ -338,26 +323,6 @@ class TestHelper {
 
   static async getTroveStake(contracts, trove) {
     return contracts.troveManager.getTroveStake(trove);
-  }
-
-  /*
-   * given the requested Bold amomunt in openTrove, returns the total debt
-   * So, it adds the gas compensation and the borrowing fee
-   */
-  static async getOpenTroveTotalDebt(contracts, boldAmount) {
-    return (await this.getCompositeDebt(contracts, boldAmount));
-  }
-
-  /*
-   * given the desired total debt, returns the Bold amount that needs to be requested in openTrove
-   * So, it subtracts the gas compensation and then the borrowing fee
-   */
-  static async getOpenTroveBoldAmount(contracts, totalDebt) {
-    const actualDebt = await this.getActualDebtFromComposite(
-      totalDebt,
-      contracts,
-    );
-    return this.getNetBorrowingAmount(contracts, actualDebt);
   }
 
   // Subtracts the borrowing fee
@@ -610,13 +575,12 @@ class TestHelper {
     BoldAmount,
   ) {
     const gasCostList = [];
-    const totalDebt = await this.getOpenTroveTotalDebt(contracts, BoldAmount);
 
     for (const account of accounts) {
       const { upperHint, lowerHint } = await this.getBorrowerOpsListHint(
         contracts,
         ETHAmount,
-        totalDebt,
+        BoldAmount,
       );
 
       const tx = await contracts.borrowerOperations.openTrove(
@@ -641,14 +605,13 @@ class TestHelper {
     BoldAmount,
   ) {
     const gasCostList = [];
-    const totalDebt = await this.getOpenTroveTotalDebt(contracts, BoldAmount);
 
     for (const account of accounts) {
       const randCollAmount = this.randAmountInWei(minETH, maxETH);
       const { upperHint, lowerHint } = await this.getBorrowerOpsListHint(
         contracts,
         randCollAmount,
-        totalDebt,
+        BoldAmount,
       );
 
       const tx = await contracts.borrowerOperations.openTrove(
@@ -679,15 +642,11 @@ class TestHelper {
       const proportionalBold = web3.utils
         .toBN(proportion)
         .mul(web3.utils.toBN(randCollAmount));
-      const totalDebt = await this.getOpenTroveTotalDebt(
-        contracts,
-        proportionalBold,
-      );
 
       const { upperHint, lowerHint } = await this.getBorrowerOpsListHint(
         contracts,
         randCollAmount,
-        totalDebt,
+        proportionalBold,
       );
 
       const tx = await contracts.borrowerOperations.openTrove(
@@ -728,14 +687,10 @@ class TestHelper {
       const proportionalBold = web3.utils
         .toBN(randBoldProportion)
         .mul(web3.utils.toBN(randCollAmount).div(_1e18));
-      const totalDebt = await this.getOpenTroveTotalDebt(
-        contracts,
-        proportionalBold,
-      );
       const { upperHint, lowerHint } = await this.getBorrowerOpsListHint(
         contracts,
         randCollAmount,
-        totalDebt,
+        proportionalBold,
       );
 
       const feeFloor = this.dec(5, 16);
@@ -770,14 +725,10 @@ class TestHelper {
 
     for (const account of accounts) {
       const randBoldAmount = this.randAmountInWei(minBold, maxBold);
-      const totalDebt = await this.getOpenTroveTotalDebt(
-        contracts,
-        randBoldAmount,
-      );
       const { upperHint, lowerHint } = await this.getBorrowerOpsListHint(
         contracts,
         ETHAmount,
-        totalDebt,
+        randBoldAmount,
       );
 
       const tx = await contracts.borrowerOperations.openTrove(
@@ -819,14 +770,10 @@ class TestHelper {
     for (const account of accounts) {
       const BoldAmount = (maxBoldAmount - i).toString();
       const BoldAmountWei = web3.utils.toWei(BoldAmount, "ether");
-      const totalDebt = await this.getOpenTroveTotalDebt(
-        contracts,
-        BoldAmountWei,
-      );
       const { upperHint, lowerHint } = await this.getBorrowerOpsListHint(
         contracts,
         ETHAmount,
-        totalDebt,
+        BoldAmountWei,
       );
 
       const tx = await contracts.borrowerOperations.openTrove(
@@ -868,7 +815,7 @@ class TestHelper {
 
     const MIN_DEBT = await this.getNetBorrowingAmount(
       contracts,
-      await contracts.borrowerOperations.MIN_NET_DEBT(),
+      await contracts.borrowerOperations.MIN_REDEMPTION_DEBT(),
     );
     // Only needed for non-zero borrow fee: .add(this.toBN(1)); // add 1 to avoid rounding issues
 
@@ -877,12 +824,9 @@ class TestHelper {
     if (!ICR && !extraParams.value) ICR = this.toBN(this.dec(15, 17)); // 150%
     else if (typeof ICR == "string") ICR = this.toBN(ICR);
 
-    const totalDebt = await this.getOpenTroveTotalDebt(contracts, boldAmount);
-    const netDebt = await this.getActualDebtFromComposite(totalDebt, contracts);
-
     if (ICR) {
       const price = await contracts.priceFeedTestnet.getPrice();
-      extraParams.value = ICR.mul(totalDebt).div(price);
+      extraParams.value = ICR.mul(boldAmount).div(price);
     }
     // await contracts.stETH.approve(
     //   contracts.borrowerOperations.address,
@@ -891,7 +835,9 @@ class TestHelper {
     // );
 
     // approve ERC20 ETH
-    await contracts.WETH.approve(contracts.borrowerOperations.address, extraParams.value, { from: extraParams.from });
+    const COLL_GASPOOL_COMPENSATION = await contracts.borrowerOperations.COLL_GASPOOL_COMPENSATION();
+    // approve ERC20 ETH
+    await contracts.WETH.approve(contracts.borrowerOperations.address, this.toBN(extraParams.value).add(COLL_GASPOOL_COMPENSATION), { from: extraParams.from });
 
     const tx = await contracts.borrowerOperations.openTrove(
       extraParams.from,
@@ -912,9 +858,7 @@ class TestHelper {
 
     return {
       troveId,
-      boldAmount,
-      netDebt,
-      totalDebt,
+      totalDebt: boldAmount,
       ICR,
       collateral: extraParams.value,
       tx,
@@ -930,8 +874,9 @@ class TestHelper {
     annualInterestRate,
     extraParams,
   ) {
+    const COLL_GASPOOL_COMPENSATION = await contracts.borrowerOperations.COLL_GASPOOL_COMPENSATION();
     // approve ERC20 ETH
-    await contracts.WETH.approve(contracts.borrowerOperations.address, extraParams.value, { from: extraParams.from });
+    await contracts.WETH.approve(contracts.borrowerOperations.address, this.toBN(extraParams.value).add(COLL_GASPOOL_COMPENSATION), { from: extraParams.from });
 
     const tx = await contracts.borrowerOperations.openTrove(
       extraParams.from,

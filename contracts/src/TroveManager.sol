@@ -2,6 +2,7 @@
 
 pragma solidity 0.8.18;
 
+import "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 
 import "./Interfaces/ITroveManager.sol";
@@ -16,21 +17,19 @@ import "./Dependencies/CheckContract.sol";
 // import "forge-std/console2.sol";
 
 contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveManager {
+    using SafeERC20 for IERC20;
+
     string public constant NAME = "TroveManager"; // TODO
     string public constant SYMBOL = "Lv2T"; // TODO
 
     // --- Connected contract declarations ---
 
+    IERC20 public immutable ETH;
     address public borrowerOperationsAddress;
-
     IStabilityPool public override stabilityPool;
-
     address gasPoolAddress;
-
     ICollSurplusPool collSurplusPool;
-
     IBoldToken public override boldToken;
-
     // A doubly linked list of Troves, sorted by their sorted by their collateral ratios
     ISortedTroves public sortedTroves;
 
@@ -170,7 +169,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         uint256 entireTroveDebt;
         uint256 entireTroveColl;
         uint256 collGasCompensation;
-        uint256 BoldGasCompensation;
+        uint256 CollGasPoolCompensation;
         uint256 debtToOffset;
         uint256 collToSendToSP;
         uint256 debtToRedistribute;
@@ -190,7 +189,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         uint256 totalWeightedRecordedDebtInSequence;
         uint256 totalAccruedInterestInSequence;
         uint256 totalCollGasCompensation;
-        uint256 totalBoldGasCompensation;
+        uint256 totalCollGasPoolCompensation;
         uint256 totalDebtToOffset;
         uint256 totalCollToSendToSP;
         uint256 totalDebtToRedistribute;
@@ -246,9 +245,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
     event CollSurplusPoolAddressChanged(address _collSurplusPoolAddress);
     event SortedTrovesAddressChanged(address _sortedTrovesAddress);
 
-    event Liquidation(
-        uint256 _liquidatedDebt, uint256 _liquidatedColl, uint256 _collGasCompensation, uint256 _boldGasCompensation
-    );
+    event Liquidation(uint256 _liquidatedDebt, uint256 _liquidatedColl, uint256 _collGasCompensation);
     event Redemption(uint256 _attemptedBoldAmount, uint256 _actualBoldAmount, uint256 _ETHSent, uint256 _ETHFee);
     event TroveUpdated(
         uint256 indexed _troveId, uint256 _debt, uint256 _coll, uint256 _stake, TroveManagerOperation _operation
@@ -269,7 +266,10 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         redeemCollateral
     }
 
-    constructor() ERC721(NAME, SYMBOL) {
+    constructor(IERC20 _ETH) ERC721(NAME, SYMBOL) {
+        checkContract(address(_ETH));
+        ETH = _ETH;
+
         // Update the baseRate state variable
         // To prevent redemptions unless Bold depegs below 0.95 and allow the system to take off
         baseRate = INITIAL_REDEMPTION_RATE;
@@ -372,7 +372,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         _removeStake(_troveId);
 
         singleLiquidation.collGasCompensation = _getCollGasCompensation(singleLiquidation.entireTroveColl);
-        singleLiquidation.BoldGasCompensation = BOLD_GAS_COMPENSATION;
+        singleLiquidation.CollGasPoolCompensation = COLL_GASPOOL_COMPENSATION;
         uint256 collToLiquidate = singleLiquidation.entireTroveColl - singleLiquidation.collGasCompensation;
 
         (
@@ -418,7 +418,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         singleLiquidation.recordedTroveDebt = Troves[_troveId].debt;
 
         singleLiquidation.collGasCompensation = _getCollGasCompensation(singleLiquidation.entireTroveColl);
-        singleLiquidation.BoldGasCompensation = BOLD_GAS_COMPENSATION;
+        singleLiquidation.CollGasPoolCompensation = COLL_GASPOOL_COMPENSATION;
         vars.collToLiquidate = singleLiquidation.entireTroveColl - singleLiquidation.collGasCompensation;
 
         // If ICR <= 100%, purely redistribute the Trove across all active Troves
@@ -559,7 +559,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         uint256 cappedCollPortion = _entireTroveDebt * MCR / _price;
 
         singleLiquidation.collGasCompensation = _getCollGasCompensation(cappedCollPortion);
-        singleLiquidation.BoldGasCompensation = BOLD_GAS_COMPENSATION;
+        singleLiquidation.CollGasPoolCompensation = COLL_GASPOOL_COMPENSATION;
 
         singleLiquidation.debtToOffset = _entireTroveDebt;
         singleLiquidation.collToSendToSP = cappedCollPortion - singleLiquidation.collGasCompensation;
@@ -727,12 +727,14 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         vars.liquidatedDebt = totals.totalDebtInSequence;
         vars.liquidatedColl = totals.totalCollInSequence - totals.totalCollGasCompensation - totals.totalCollSurplus;
         emit Liquidation(
-            vars.liquidatedDebt, vars.liquidatedColl, totals.totalCollGasCompensation, totals.totalBoldGasCompensation
+            vars.liquidatedDebt,
+            vars.liquidatedColl,
+            totals.totalCollGasCompensation + totals.totalCollGasPoolCompensation
         );
 
         // Send gas compensation to caller
         _sendGasCompensation(
-            activePoolCached, msg.sender, totals.totalBoldGasCompensation, totals.totalCollGasCompensation
+            activePoolCached, msg.sender, totals.totalCollGasPoolCompensation, totals.totalCollGasCompensation
         );
     }
 
@@ -830,7 +832,8 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
     ) internal pure returns (LiquidationTotals memory newTotals) {
         // Tally all the values with their respective running totals
         newTotals.totalCollGasCompensation = oldTotals.totalCollGasCompensation + singleLiquidation.collGasCompensation;
-        newTotals.totalBoldGasCompensation = oldTotals.totalBoldGasCompensation + singleLiquidation.BoldGasCompensation;
+        newTotals.totalCollGasPoolCompensation =
+            oldTotals.totalCollGasPoolCompensation + singleLiquidation.CollGasPoolCompensation;
         newTotals.totalDebtInSequence = oldTotals.totalDebtInSequence + singleLiquidation.entireTroveDebt;
         newTotals.totalCollInSequence = oldTotals.totalCollInSequence + singleLiquidation.entireTroveColl;
         newTotals.totalRecordedDebtInSequence =
@@ -850,9 +853,14 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         return newTotals;
     }
 
-    function _sendGasCompensation(IActivePool _activePool, address _liquidator, uint256 _bold, uint256 _ETH) internal {
-        if (_bold > 0) {
-            boldToken.returnFromPool(gasPoolAddress, _liquidator, _bold);
+    function _sendGasCompensation(
+        IActivePool _activePool,
+        address _liquidator,
+        uint256 _gasPoolCompensation,
+        uint256 _ETH
+    ) internal {
+        if (_gasPoolCompensation > 0) {
+            ETH.safeTransferFrom(gasPoolAddress, _liquidator, _gasPoolCompensation);
         }
 
         if (_ETH > 0) {
@@ -894,7 +902,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
 
         // Determine the remaining amount (lot) to be redeemed, capped by the entire debt of the Trove minus the liquidation reserve
         // TODO: should we leave gas compensation (and corresponding debt) untouched for zombie Troves? Currently it's not touched.
-        singleRedemption.BoldLot = LiquityMath._min(_maxBoldamount, entireTroveDebt - BOLD_GAS_COMPENSATION);
+        singleRedemption.BoldLot = LiquityMath._min(_maxBoldamount, entireTroveDebt);
 
         // Get the ETHLot of equivalent value in USD
         singleRedemption.ETHLot = singleRedemption.BoldLot * DECIMAL_PRECISION / _price;
@@ -903,9 +911,13 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         singleRedemption.newRecordedTroveDebt = entireTroveDebt - singleRedemption.BoldLot;
         uint256 newColl = Troves[_troveId].coll - singleRedemption.ETHLot;
 
-        if (singleRedemption.newRecordedTroveDebt <= MIN_NET_DEBT) {
+        if (singleRedemption.newRecordedTroveDebt <= MIN_REDEMPTION_DEBT) {
             // TODO: tag it as a zombie Trove and remove from Sorted List
+            // In order to avoid DoS attacks (placing a long list of tiny debts in the beggining to make redemption gas expensive)
+            // TODO: do this on trove creation and adjustment
         }
+        // TODO: Should we allow Trove coll going below MIN_COLL? If not, what should we do with those Troves then?
+
         Troves[_troveId].debt = singleRedemption.newRecordedTroveDebt;
         Troves[_troveId].coll = newColl;
 
@@ -1313,13 +1325,13 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
 
     // Push the trove's id to the Trove list, and record the corresponding array index on the Trove struct
     function _addTroveIdToArray(uint256 _troveId) internal returns (uint256) {
-        /* Max array size is 2**128 - 1, i.e. ~3e30 troves. No risk of overflow, since troves have minimum Bold
-        debt of liquidation reserve plus MIN_NET_DEBT. 3e30 Bold dwarfs the value of all wealth in the world ( which is < 1e15 USD). */
+        /* Max array size is 2**128 - 1, i.e. ~3e30 troves. No risk of overflow, since troves have minimum Coll
+        debt of MIN_COLL. 3e30 Bold dwarfs the value of all wealth in the world ( which is < 1e15 USD). */
 
-        // Push the Troveowner to the array
+        // Push the Trove id to the array
         TroveIds.push(_troveId);
 
-        // Record the index of the new Troveowner on their Trove struct
+        // Record the index of the new Trove id on their Trove struct
         uint128 index = uint128(TroveIds.length - 1);
         Troves[_troveId].arrayIndex = index;
 
@@ -1568,7 +1580,9 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         uint256 _troveId,
         uint256 _coll,
         uint256 _debt,
-        uint256 _annualInterestRate
+        uint256 _annualInterestRate,
+        uint256 _upperHint,
+        uint256 _lowerHint
     ) external returns (uint256, uint256) {
         _requireCallerIsBorrowerOperations();
         // TODO: optimize gas for writing to this struct
@@ -1583,6 +1597,12 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         _mint(_owner, _troveId);
 
         uint256 index = _addTroveIdToArray(_troveId);
+
+        if (_debt >= MIN_REDEMPTION_DEBT) {
+            sortedTroves.insert(_troveId, _annualInterestRate, _upperHint, _lowerHint);
+        } else {
+            // TODO: tag as zombi trove
+        }
 
         // Record the Trove's stake (for redistributions) and update the total stakes
         uint256 stake = _updateStakeAndTotalStakes(_troveId);
@@ -1623,6 +1643,11 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
     function _updateTroveDebt(uint256 _troveId, uint256 _entireTroveDebt) internal {
         Troves[_troveId].debt = _entireTroveDebt;
         Troves[_troveId].lastDebtUpdateTime = uint64(block.timestamp);
+        if (_entireTroveDebt >= MIN_REDEMPTION_DEBT) {
+            // insert into SortedTroves list if it was not there
+        } else {
+            // TODO: tag as zombi trove and remove from SortedTroves list if it was there
+        }
     }
 
     function updateTroveColl(address _sender, uint256 _troveId, uint256 _entireTroveColl, bool _isCollIncrease)

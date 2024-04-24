@@ -42,7 +42,6 @@ contract("TroveManager - Redistribution reward calculations", async (accounts) =
   let defaultPool;
   let borrowerOperations;
 
-  const getOpenTroveBoldAmount = async (totalDebt) => th.getOpenTroveBoldAmount(contracts, totalDebt);
   const getNetBorrowingAmount = async (debtWithFee) => th.getNetBorrowingAmount(contracts, debtWithFee);
   const openTrove = async (params) => th.openTrove(contracts, params);
 
@@ -163,7 +162,7 @@ contract("TroveManager - Redistribution reward calculations", async (accounts) =
     );
 
     // check Bold gas compensation
-    assert.equal((await boldToken.balanceOf(owner)).toString(), dec(400, 18));
+    assert.equal((await boldToken.balanceOf(owner)).toString(), 0);
   });
 
   it("redistribution: A, B, C Open. C Liquidated. D, E, F Open. F Liquidated. Distributes correct rewards", async () => {
@@ -285,7 +284,7 @@ contract("TroveManager - Redistribution reward calculations", async (accounts) =
     );
 
     // check Bold gas compensation
-    assert.equal((await boldToken.balanceOf(owner)).toString(), dec(400, 18));
+    assert.equal((await boldToken.balanceOf(owner)).toString(), 0);
   });
   ////
 
@@ -944,7 +943,7 @@ contract("TroveManager - Redistribution reward calculations", async (accounts) =
     assert.isAtMost(th.getDifference(alice_BoldDebt, expected_A_debt), 10000);
 
     // check Bold gas compensation
-    assert.equal((await boldToken.balanceOf(owner)).toString(), dec(400, 18));
+    assert.equal((await boldToken.balanceOf(owner)).toString(), 0);
   });
 
   it("redistribution: Trove with the majority stake tops up. A,B,C, D open. Liq(D). C tops up. E Enters, Liq(E). Distributes correct rewards", async () => {
@@ -1371,7 +1370,7 @@ contract("TroveManager - Redistribution reward calculations", async (accounts) =
     );
 
     // check Bold gas compensation
-    assert.equal((await boldToken.balanceOf(owner)).toString(), dec(400, 18));
+    assert.equal((await boldToken.balanceOf(owner)).toString(), 0);
   });
 
   it("redistribution: A,B,C Open. Liq(C). B withdraws coll. D Opens. Liq(D). Distributes correct rewards.", async () => {
@@ -1654,7 +1653,7 @@ contract("TroveManager - Redistribution reward calculations", async (accounts) =
     );
 
     // check Bold gas compensation
-    assert.equal((await boldToken.balanceOf(owner)).toString(), dec(400, 18));
+    assert.equal((await boldToken.balanceOf(owner)).toString(), 0);
   });
 
   it("redistribution: Trove with the majority stake withdraws. A,B,C,D open. Liq(D). A, B, C withdraw. E Enters, Liq(E). Distributes correct rewards", async () => {
@@ -1866,7 +1865,7 @@ contract("TroveManager - Redistribution reward calculations", async (accounts) =
     );
 
     // check Bold gas compensation
-    assert.equal((await boldToken.balanceOf(owner)).toString(), dec(400, 18));
+    assert.equal((await boldToken.balanceOf(owner)).toString(), 0);
   });
 
   // For calculations of correct values used in test, see scenario 1:
@@ -2157,7 +2156,7 @@ contract("TroveManager - Redistribution reward calculations", async (accounts) =
     );
 
     // check Bold gas compensation
-    assert.equal((await boldToken.balanceOf(owner)).toString(), dec(600, 18));
+    assert.equal((await boldToken.owner(balanceOf)).toString(), 0);
   });
 
   // For calculations of correct values used in test, see scenario 2:
@@ -2229,10 +2228,10 @@ contract("TroveManager - Redistribution reward calculations", async (accounts) =
     // Price rises
     await priceFeed.setPrice(dec(1, 27));
 
-    // D opens trove: 0.035 ETH
+    // D opens trove: 3.5 ETH
     const { troveId: dennisTroveId, collateral: D_coll, totalDebt: D_totalDebt } = await openTrove({
-      extraBoldAmount: dec(100, 18),
-      extraParams: { from: dennis, value: toBN(dec(35, 15)) },
+      extraBoldAmount: dec(100, 20),
+      extraParams: { from: dennis, value: toBN(dec(35, 17)) },
     });
 
     // Bob adds 11.33909 ETH to his trove
@@ -2320,15 +2319,15 @@ contract("TroveManager - Redistribution reward calculations", async (accounts) =
 
     /* E and F open troves.
     E: 10000 ETH
-    F: 0.0007 ETH
+    F: 7 ETH
     */
     const { troveId: erinTroveId, collateral: E_coll, totalDebt: E_totalDebt } = await openTrove({
       extraBoldAmount: dec(100, 18),
       extraParams: { from: erin, value: toBN(dec(1, 22)) },
     });
     const { troveId: freddyTroveId, collateral: F_coll, totalDebt: F_totalDebt } = await openTrove({
-      extraBoldAmount: dec(100, 18),
-      extraParams: { from: freddy, value: toBN("700000000000000") },
+      extraBoldAmount: dec(100, 22),
+      extraParams: { from: freddy, value: toBN(dec(7, 18)) },
     });
 
     // D tops up
@@ -2453,6 +2452,6 @@ contract("TroveManager - Redistribution reward calculations", async (accounts) =
     );
 
     // check Bold gas compensation
-    assert.equal((await boldToken.balanceOf(owner)).toString(), dec(600, 18));
+    assert.equal((await boldToken.balanceOf(owner)).toString(), 0);
   });
 });

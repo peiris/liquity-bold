@@ -29,6 +29,8 @@ contract("TroveManager", async (accounts) => {
   const _18_zeros = "000000000000000000";
   const ZERO_ADDRESS = th.ZERO_ADDRESS;
 
+  let COLL_GASPOOL_COMPENSATION;
+
   const [
     owner,
     alice,
@@ -68,7 +70,6 @@ contract("TroveManager", async (accounts) => {
     mocks: { TroveManager: TroveManagerTester },
   });
   const getOpenTroveTotalDebt = async (boldAmount) => th.getOpenTroveTotalDebt(contracts, boldAmount);
-  const getOpenTroveBoldAmount = async (totalDebt) => th.getOpenTroveBoldAmount(contracts, totalDebt);
   const getActualDebtFromComposite = async (compositeDebt) => th.getActualDebtFromComposite(compositeDebt, contracts);
   const getNetBorrowingAmount = async (debtWithFee) => th.getNetBorrowingAmount(contracts, debtWithFee);
   const openTrove = async (params) => th.openTrove(contracts, params);
@@ -85,6 +86,8 @@ contract("TroveManager", async (accounts) => {
     stabilityPool = contracts.stabilityPool;
     defaultPool = contracts.defaultPool;
     borrowerOperations = contracts.borrowerOperations;
+
+    COLL_GASPOOL_COMPENSATION = await borrowerOperations.COLL_GASPOOL_COMPENSATION();
   });
 
   it("liquidate(): closes a Trove that has ICR < MCR", async () => {
@@ -796,7 +799,7 @@ contract("TroveManager", async (accounts) => {
 
     // Expect only change to TCR to be due to the issued gas compensation
     const expectedTCR_1 = entireSystemCollBefore
-      .sub(gasComp_1)
+      .sub(gasComp_1.sub(COLL_GASPOOL_COMPENSATION))
       .mul(price)
       .div(entireSystemDebtBefore);
 
@@ -809,8 +812,8 @@ contract("TroveManager", async (accounts) => {
     const TCR_2 = await th.getTCR(contracts);
 
     const expectedTCR_2 = entireSystemCollBefore
-      .sub(gasComp_1)
-      .sub(gasComp_2)
+      .sub(gasComp_1.sub(COLL_GASPOOL_COMPENSATION))
+      .sub(gasComp_2.sub(COLL_GASPOOL_COMPENSATION))
       .mul(price)
       .div(entireSystemDebtBefore);
 
@@ -824,9 +827,9 @@ contract("TroveManager", async (accounts) => {
     const TCR_3 = await th.getTCR(contracts);
 
     const expectedTCR_3 = entireSystemCollBefore
-      .sub(gasComp_1)
-      .sub(gasComp_2)
-      .sub(gasComp_3)
+      .sub(gasComp_1.sub(COLL_GASPOOL_COMPENSATION))
+      .sub(gasComp_2.sub(COLL_GASPOOL_COMPENSATION))
+      .sub(gasComp_3.sub(COLL_GASPOOL_COMPENSATION))
       .mul(price)
       .div(entireSystemDebtBefore);
 
@@ -839,10 +842,10 @@ contract("TroveManager", async (accounts) => {
     const TCR_4 = await th.getTCR(contracts);
 
     const expectedTCR_4 = entireSystemCollBefore
-      .sub(gasComp_1)
-      .sub(gasComp_2)
-      .sub(gasComp_3)
-      .sub(gasComp_4)
+      .sub(gasComp_1.sub(COLL_GASPOOL_COMPENSATION))
+      .sub(gasComp_2.sub(COLL_GASPOOL_COMPENSATION))
+      .sub(gasComp_3.sub(COLL_GASPOOL_COMPENSATION))
+      .sub(gasComp_4.sub(COLL_GASPOOL_COMPENSATION))
       .mul(price)
       .div(entireSystemDebtBefore);
 
@@ -1095,17 +1098,17 @@ contract("TroveManager", async (accounts) => {
 
   it("liquidate(): does not alter the liquidated user's token balance", async () => {
     await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } });
-    const { troveId: aliceTroveId, boldAmount: A_boldAmount } = await openTrove({
+    const { troveId: aliceTroveId, totalDebt: A_boldAmount } = await openTrove({
       ICR: toBN(dec(2, 18)),
       extraBoldAmount: toBN(dec(300, 18)),
       extraParams: { from: alice },
     });
-    const { troveId: bobTroveId, boldAmount: B_boldAmount } = await openTrove({
+    const { troveId: bobTroveId, totalDebt: B_boldAmount } = await openTrove({
       ICR: toBN(dec(2, 18)),
       extraBoldAmount: toBN(dec(200, 18)),
       extraParams: { from: bob },
     });
-    const { troveId: carolTroveId, boldAmount: C_boldAmount } = await openTrove({
+    const { troveId: carolTroveId, totalDebt: C_boldAmount } = await openTrove({
       ICR: toBN(dec(2, 18)),
       extraBoldAmount: toBN(dec(100, 18)),
       extraParams: { from: carol },
@@ -2851,7 +2854,7 @@ contract("TroveManager", async (accounts) => {
     // --- TEST ---
 
     // open trove from redeemer.  Redeemer has highest ICR (100ETH, 100 Bold), 20000%
-    const { boldAmount: F_boldAmount } = await openTrove({
+    const { totalDebt: F_boldAmount } = await openTrove({
       ICR: toBN(dec(200, 18)),
       extraBoldAmount: redemptionAmount.mul(toBN(2)),
       extraParams: { from: flyn },
@@ -2936,7 +2939,7 @@ contract("TroveManager", async (accounts) => {
     // --- TEST ---
 
     // open trove from redeemer.  Redeemer has highest ICR (100ETH, 100 Bold), 20000%
-    const { troveId: flynTroveId, boldAmount: F_boldAmount } = await openTrove({
+    const { troveId: flynTroveId, totalDebt: F_boldAmount } = await openTrove({
       ICR: toBN(dec(200, 18)),
       extraBoldAmount: redemptionAmount.mul(toBN(2)),
       extraParams: { from: flyn },
@@ -2986,7 +2989,7 @@ contract("TroveManager", async (accounts) => {
     const ATroveId = await th.openTroveWrapper(
       contracts,
       th._100pct,
-      await getOpenTroveBoldAmount(dec(10000, 18)),
+      dec(10000, 18),
       A,
       A,
       { from: A, value: dec(1000, "ether") },
@@ -2994,7 +2997,7 @@ contract("TroveManager", async (accounts) => {
     const BTroveId = await th.openTroveWrapper(
       contracts,
       th._100pct,
-      await getOpenTroveBoldAmount(dec(20000, 18)),
+      dec(20000, 18),
       B,
       B,
       { from: B, value: dec(1000, "ether") },
@@ -3002,7 +3005,7 @@ contract("TroveManager", async (accounts) => {
     const CTroveId = await th.openTroveWrapper(
       contracts,
       th._100pct,
-      await getOpenTroveBoldAmount(dec(30000, 18)),
+      dec(30000, 18),
       C,
       C,
       { from: C, value: dec(1000, "ether") },
@@ -3040,7 +3043,7 @@ contract("TroveManager", async (accounts) => {
     const ATroveId = await th.openTroveWrapper(
       contracts,
       th._100pct,
-      await getOpenTroveBoldAmount(dec(6000, 18)),
+      dec(6000, 18),
       A,
       A,
       { from: A, value: dec(1000, "ether") },
@@ -3048,7 +3051,7 @@ contract("TroveManager", async (accounts) => {
     const BTroveId = await th.openTroveWrapper(
       contracts,
       th._100pct,
-      await getOpenTroveBoldAmount(dec(20000, 18)),
+      dec(20000, 18),
       B,
       B,
       { from: B, value: dec(1000, "ether") },
@@ -3056,7 +3059,7 @@ contract("TroveManager", async (accounts) => {
     const CTroveId = await th.openTroveWrapper(
       contracts,
       th._100pct,
-      await getOpenTroveBoldAmount(dec(30000, 18)),
+      dec(30000, 18),
       C,
       C,
       { from: C, value: dec(1000, "ether") },
@@ -3225,7 +3228,7 @@ contract("TroveManager", async (accounts) => {
   it.skip("redeemCollateral(): can redeem if there is zero active debt but non-zero debt in DefaultPool", async () => {
     // --- SETUP ---
 
-    const amount = await getOpenTroveBoldAmount(dec(110, 18));
+    const amount = dec(110, 18);
     await openTrove({ ICR: toBN(dec(20, 18)), extraParams: { from: alice } });
     await openTrove({
       ICR: toBN(dec(133, 16)),
@@ -3285,13 +3288,13 @@ contract("TroveManager", async (accounts) => {
       ICR: toBN(dec(13, 18)),
       extraParams: { from: alice },
     });
-    const { troveId: bobTroveId, boldAmount: B_boldAmount, totalDebt: B_totalDebt } = await openTrove({
+    const { troveId: bobTroveId, totalDebt: B_totalDebt } = await openTrove({
       ICR: toBN(dec(133, 16)),
       extraBoldAmount: A_debt,
       extraParams: { from: bob },
     });
 
-    await boldToken.transfer(carol, B_boldAmount, { from: bob });
+    await boldToken.transfer(carol, B_totalDebt, { from: bob });
 
     // Put Bob's Trove below 110% ICR
     const price = dec(100, 18);

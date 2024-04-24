@@ -15,33 +15,33 @@ contract Redemptions is DevTestSetup {
         uint256 redeemAmount_1 = debt_A + debt_B / 2;
         redeem(E, redeemAmount_1);
 
-        // Check A's Trove debt equals gas comp
-        assertEq(troveManager.getTroveEntireDebt(troveIDs.A), troveManager.BOLD_GAS_COMPENSATION());
+        // Check A's Trove debt equals zero
+        assertEq(troveManager.getTroveEntireDebt(troveIDs.A), 0, "A debt should be zero");
         // Check B coll and debt reduced
-        assertLt(troveManager.getTroveEntireDebt(troveIDs.B), debt_B);
-        assertLt(troveManager.getTroveEntireColl(troveIDs.B), coll);
+        assertLt(troveManager.getTroveEntireDebt(troveIDs.B), debt_B, "B debt should have reduced");
+        assertLt(troveManager.getTroveEntireColl(troveIDs.B), coll, "B coll should have reduced");
         // Check C coll and debt unchanged
-        assertEq(troveManager.getTroveEntireDebt(troveIDs.C), debt_C);
-        assertEq(troveManager.getTroveEntireColl(troveIDs.C), coll);
+        assertEq(troveManager.getTroveEntireDebt(troveIDs.C), debt_C, "C debt should be unchanged");
+        assertEq(troveManager.getTroveEntireColl(troveIDs.C), coll, "C coll should be unchanged");
         // Check D coll and debt unchanged
-        assertEq(troveManager.getTroveEntireDebt(troveIDs.D), debt_D);
-        assertEq(troveManager.getTroveEntireColl(troveIDs.D), coll);
+        assertEq(troveManager.getTroveEntireDebt(troveIDs.D), debt_D, "D debt should be unchanged");
+        assertEq(troveManager.getTroveEntireColl(troveIDs.D), coll, "D coll should be unchanged");
 
         // E redeems enough to fully redeem B and partially redeem C
         uint256 redeemAmount_2 = debt_B / 2 + debt_C / 2;
         redeem(E, redeemAmount_2);
 
-        // Check A's Trove debt equals gas comp
-        assertEq(troveManager.getTroveEntireDebt(troveIDs.B), troveManager.BOLD_GAS_COMPENSATION());
+        // Check B's Trove debt equals zero
+        assertEq(troveManager.getTroveEntireDebt(troveIDs.B), 0, "A debt should be zero");
         // Check C coll and debt reduced
-        assertLt(troveManager.getTroveEntireDebt(troveIDs.C), debt_C);
-        assertLt(troveManager.getTroveEntireColl(troveIDs.C), coll);
+        assertLt(troveManager.getTroveEntireDebt(troveIDs.C), debt_C, "C debt should have reduced");
+        assertLt(troveManager.getTroveEntireColl(troveIDs.C), coll, "C coll should have reduced");
         // Check D coll and debt unchanged
-        assertEq(troveManager.getTroveEntireDebt(troveIDs.D), debt_D);
-        assertEq(troveManager.getTroveEntireColl(troveIDs.D), coll);
+        assertEq(troveManager.getTroveEntireDebt(troveIDs.D), debt_D, "D debt should be unchanged");
+        assertEq(troveManager.getTroveEntireColl(troveIDs.D), coll, "D coll should be unchanged");
     }
 
-    // - Troves can be redeemed down to gas comp
+    // - Troves can be redeemed down to zero
     function testFullRedemptionDoesntCloseTroves() public {
         (,, TroveIDs memory troveIDs) = _setupForRedemption();
 
@@ -67,9 +67,9 @@ contract Redemptions is DevTestSetup {
         uint256 redeemAmount_1 = debt_A + debt_B;
         redeem(E, redeemAmount_1);
 
-        // Check A and B's Trove debt equals gas comp
-        assertEq(troveManager.getTroveEntireDebt(troveIDs.A), troveManager.BOLD_GAS_COMPENSATION());
-        assertEq(troveManager.getTroveEntireDebt(troveIDs.B), troveManager.BOLD_GAS_COMPENSATION());
+        // Check A and B's Trove debt equals zero
+        assertEq(troveManager.getTroveEntireDebt(troveIDs.A), 0);
+        assertEq(troveManager.getTroveEntireDebt(troveIDs.B), 0);
     }
 
     function testFullRedemptionSkipsTrovesAtGasCompDebt() public {
@@ -83,19 +83,19 @@ contract Redemptions is DevTestSetup {
         uint256 redeemAmount_1 = debt_A + debt_B;
         redeem(E, redeemAmount_1);
 
-        // Check A and B's Trove debt equals gas comp
-        assertEq(troveManager.getTroveEntireDebt(troveIDs.A), troveManager.BOLD_GAS_COMPENSATION());
-        assertEq(troveManager.getTroveEntireDebt(troveIDs.B), troveManager.BOLD_GAS_COMPENSATION());
+        // Check A and B's Trove debt equals zero
+        assertEq(troveManager.getTroveEntireDebt(troveIDs.A), 0);
+        assertEq(troveManager.getTroveEntireDebt(troveIDs.B), 0);
 
         // E redeems again, enough to partially redeem C
         uint256 redeemAmount_2 = debt_C / 2;
         redeem(E, redeemAmount_2);
 
-        // Check A and B still open with debt == gas comp
+        // Check A and B still open with debt == zero
         assertEq(troveManager.getTroveStatus(troveIDs.A), 1); // Status active
         assertEq(troveManager.getTroveStatus(troveIDs.B), 1); // Status active
-        assertEq(troveManager.getTroveEntireDebt(troveIDs.A), troveManager.BOLD_GAS_COMPENSATION());
-        assertEq(troveManager.getTroveEntireDebt(troveIDs.B), troveManager.BOLD_GAS_COMPENSATION());
+        assertEq(troveManager.getTroveEntireDebt(troveIDs.A), 0);
+        assertEq(troveManager.getTroveEntireDebt(troveIDs.B), 0);
 
         // Check C's debt and coll reduced
         assertLt(troveManager.getTroveEntireDebt(troveIDs.C), debt_C);
@@ -107,21 +107,19 @@ contract Redemptions is DevTestSetup {
     function testRedemptionIncludesAccruedTroveInterest() public {
         (,, TroveIDs memory troveIDs) = _setupForRedemption();
 
-        (,, uint256 redistDebtGain_A,, uint256 accruedInterest_A) =
-            troveManager.getEntireDebtAndColl(troveIDs.A);
+        (,, uint256 redistDebtGain_A,, uint256 accruedInterest_A) = troveManager.getEntireDebtAndColl(troveIDs.A);
         assertGt(accruedInterest_A, 0);
         assertEq(redistDebtGain_A, 0);
 
         troveManager.getTroveEntireDebt(troveIDs.A);
         uint256 debt_B = troveManager.getTroveEntireDebt(troveIDs.B);
 
-        // E redeems again, enough to fully redeem A (recorded debt + interest - gas comp), without touching the next trove B
-        uint256 redeemAmount =
-            troveManager.getTroveDebt(troveIDs.A) + accruedInterest_A - troveManager.BOLD_GAS_COMPENSATION();
+        // E redeems again, enough to fully redeem A (recorded debt + interest), without touching the next trove B
+        uint256 redeemAmount = troveManager.getTroveDebt(troveIDs.A) + accruedInterest_A;
         redeem(E, redeemAmount);
 
-        // Check A reduced down to gas comp
-        assertEq(troveManager.getTroveEntireDebt(troveIDs.A), troveManager.BOLD_GAS_COMPENSATION());
+        // Check A reduced down to zero
+        assertEq(troveManager.getTroveEntireDebt(troveIDs.A), 0);
 
         // Check B's debt unchanged
         assertEq(troveManager.getTroveEntireDebt(troveIDs.B), debt_B);

@@ -68,7 +68,6 @@ contract.skip("TroveManager - in Recovery Mode", async (accounts) => {
 
   let contracts;
 
-  const getOpenTroveBoldAmount = async (totalDebt) => th.getOpenTroveBoldAmount(contracts, totalDebt);
   const getNetBorrowingAmount = async (debtWithFee) => th.getNetBorrowingAmount(contracts, debtWithFee);
   const openTrove = async (params) => th.openTrove(contracts, params);
 
@@ -2107,17 +2106,17 @@ contract.skip("TroveManager - in Recovery Mode", async (accounts) => {
       extraParams: { from: whale },
     });
 
-    const { boldAmount: A_boldAmount } = await openTrove({
+    const { totalDebt: A_boldAmount } = await openTrove({
       ICR: toBN(dec(200, 16)),
       extraBoldAmount: dec(300, 18),
       extraParams: { from: alice },
     });
-    const { boldAmount: B_boldAmount } = await openTrove({
+    const { totalDebt: B_boldAmount } = await openTrove({
       ICR: toBN(dec(200, 16)),
       extraBoldAmount: dec(200, 18),
       extraParams: { from: bob },
     });
-    const { boldAmount: C_boldAmount } = await openTrove({
+    const { totalDebt: C_boldAmount } = await openTrove({
       ICR: toBN(dec(206, 16)),
       extraBoldAmount: dec(100, 18),
       extraParams: { from: carol },

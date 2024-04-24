@@ -43,11 +43,10 @@ contract("BorrowerOperations", async (accounts) => {
   let defaultPool;
   let borrowerOperations;
 
-  let BOLD_GAS_COMPENSATION;
-  let MIN_NET_DEBT;
+  let COLL_GASPOOL_COMPENSATION;
+  let MIN_REDEMPTION_DEBT;
   let BORROWING_FEE_FLOOR;
 
-  const getOpenTroveBoldAmount = async (totalDebt) => th.getOpenTroveBoldAmount(contracts, totalDebt);
   const getNetBorrowingAmount = async (debtWithFee) => th.getNetBorrowingAmount(contracts, debtWithFee);
   const getActualDebtFromComposite = async (compositeDebt) => th.getActualDebtFromComposite(compositeDebt, contracts);
   const openTrove = async (params) => th.openTrove(contracts, params);
@@ -64,17 +63,17 @@ contract("BorrowerOperations", async (accounts) => {
     callback: async (contracts) => {
       const { borrowerOperations } = contracts;
       const [
-        BOLD_GAS_COMPENSATION,
-        MIN_NET_DEBT,
+        COLL_GASPOOL_COMPENSATION,
+        MIN_REDEMPTION_DEBT,
         BORROWING_FEE_FLOOR,
       ] = await Promise.all([
-        borrowerOperations.BOLD_GAS_COMPENSATION(),
-        borrowerOperations.MIN_NET_DEBT(),
+        borrowerOperations.COLL_GASPOOL_COMPENSATION(),
+        borrowerOperations.MIN_REDEMPTION_DEBT(),
         borrowerOperations.BORROWING_FEE_FLOOR(),
       ]);
       return {
-        BOLD_GAS_COMPENSATION,
-        MIN_NET_DEBT,
+        COLL_GASPOOL_COMPENSATION,
+        MIN_REDEMPTION_DEBT,
         BORROWING_FEE_FLOOR,
       };
     },
@@ -93,8 +92,8 @@ contract("BorrowerOperations", async (accounts) => {
       defaultPool = contracts.defaultPool;
       borrowerOperations = contracts.borrowerOperations;
 
-      BOLD_GAS_COMPENSATION = result.BOLD_GAS_COMPENSATION;
-      MIN_NET_DEBT = result.MIN_NET_DEBT;
+      COLL_GASPOOL_COMPENSATION = result.COLL_GASPOOL_COMPENSATION;
+      MIN_REDEMPTION_DEBT = result.MIN_REDEMPTION_DEBT;
       BORROWING_FEE_FLOOR = result.BORROWING_FEE_FLOOR;
     });
 
@@ -1090,7 +1089,7 @@ contract("BorrowerOperations", async (accounts) => {
       await borrowerOperations.withdrawBold(
         aliceTroveId,
         th._100pct,
-        await getNetBorrowingAmount(100),
+        100,
         { from: alice },
       );
 
@@ -1118,7 +1117,7 @@ contract("BorrowerOperations", async (accounts) => {
       await borrowerOperations.withdrawBold(
         aliceTroveId,
         th._100pct,
-        await getNetBorrowingAmount(dec(10000, 18)),
+        dec(10000, 18),
         { from: alice },
       );
 
@@ -1185,7 +1184,7 @@ contract("BorrowerOperations", async (accounts) => {
       const ATroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getNetBorrowingAmount(MIN_NET_DEBT.add(toBN("2"))),
+        MIN_REDEMPTION_DEBT.add(toBN("2")),
         A,
         A,
         0,
@@ -1211,7 +1210,7 @@ contract("BorrowerOperations", async (accounts) => {
       const ATroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getNetBorrowingAmount(MIN_NET_DEBT.add(toBN("1"))),
+        MIN_REDEMPTION_DEBT.add(toBN("1")),
         A,
         A,
         0,
@@ -1238,8 +1237,7 @@ contract("BorrowerOperations", async (accounts) => {
         ICR: toBN(dec(10, 18)),
         extraParams: { from: alice },
       });
-      BOLD_GAS_COMPENSATION = await borrowerOperations.BOLD_GAS_COMPENSATION();
-      const repayAmount = totalDebt.sub(BOLD_GAS_COMPENSATION).add(toBN(1));
+      const repayAmount = totalDebt.add(toBN(1));
       await openTrove({
         extraBoldAmount: repayAmount,
         ICR: toBN(dec(150, 16)),
@@ -1972,9 +1970,7 @@ contract("BorrowerOperations", async (accounts) => {
       // Alice transfers 1 Bold to bob
       await boldToken.transfer(bob, th.toBN(dec(1, 18)), { from: alice });
 
-      const remainingDebt = (await troveManager.getTroveDebt(bobTroveId)).sub(
-        BOLD_GAS_COMPENSATION,
-      );
+      const remainingDebt = await troveManager.getTroveDebt(bobTroveId);
 
       // Bob attempts an adjustment that would repay 1 wei more than his debt
       // approve ERC20 ETH
@@ -2147,7 +2143,7 @@ contract("BorrowerOperations", async (accounts) => {
         th._100pct,
         dec(1, "ether"),
         true,
-        await getNetBorrowingAmount(dec(50, 18)),
+        dec(50, 18),
         true,
         { from: alice },
       );
@@ -2273,7 +2269,7 @@ contract("BorrowerOperations", async (accounts) => {
         th._100pct,
         dec(1, 17),
         false,
-        await getNetBorrowingAmount(dec(1, 18)),
+        dec(1, 18),
         true,
         { from: alice },
       );
@@ -2597,7 +2593,7 @@ contract("BorrowerOperations", async (accounts) => {
         th._100pct,
         dec(1, "ether"),
         true,
-        await getNetBorrowingAmount(dec(100, 18)),
+        dec(100, 18),
         true,
         { from: alice },
       );
@@ -3262,7 +3258,7 @@ contract("BorrowerOperations", async (accounts) => {
       );
       const balanceDiff = alice_ETHBalance_After.sub(alice_ETHBalance_Before);
 
-      assert.isTrue(balanceDiff.eq(aliceColl));
+      assert.isTrue(balanceDiff.eq(aliceColl.add(COLL_GASPOOL_COMPENSATION)));
     });
 
     it("closeTrove(): subtracts the debt of the closed Trove from the Borrower's BoldToken balance", async () => {
@@ -3295,7 +3291,7 @@ contract("BorrowerOperations", async (accounts) => {
       const alice_BoldBalance_After = await boldToken.balanceOf(alice);
       th.assertIsApproximatelyEqual(
         alice_BoldBalance_After,
-        alice_BoldBalance_Before.sub(aliceDebt.sub(BOLD_GAS_COMPENSATION)),
+        alice_BoldBalance_Before.sub(aliceDebt),
       );
     });
 
@@ -3567,7 +3563,7 @@ contract("BorrowerOperations", async (accounts) => {
       const ATroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getNetBorrowingAmount(MIN_NET_DEBT.add(toBN(1))),
+        MIN_REDEMPTION_DEBT.add(toBN(1)),
         A,
         A,
         0,
@@ -3578,7 +3574,7 @@ contract("BorrowerOperations", async (accounts) => {
       const CTroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getNetBorrowingAmount(MIN_NET_DEBT.add(toBN(dec(47789898, 22)))),
+        MIN_REDEMPTION_DEBT.add(toBN(dec(47789898, 22))),
         A,
         A,
         0,
@@ -3597,7 +3593,7 @@ contract("BorrowerOperations", async (accounts) => {
       const txBPromise = th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getNetBorrowingAmount(MIN_NET_DEBT.sub(toBN(1))),
+        MIN_REDEMPTION_DEBT.sub(toBN(1)),
         B,
         B,
         0,
@@ -3605,7 +3601,7 @@ contract("BorrowerOperations", async (accounts) => {
       );
       await assertRevert(txBPromise, "revert");
 
-      const txCPromise = th.openTroveWrapper(contracts, th._100pct, MIN_NET_DEBT.sub(toBN(dec(173, 18))), C, C, 0, {
+      const txCPromise = th.openTroveWrapper(contracts, th._100pct, MIN_REDEMPTION_DEBT.sub(toBN(dec(173, 18))), C, C, 0, {
         from: C,
         value: dec(100, 30),
       });
@@ -3820,7 +3816,7 @@ contract("BorrowerOperations", async (accounts) => {
       assert.isTrue(await th.checkRecoveryMode(contracts));
 
       await assertRevert(
-        th.openTroveWrapper(contracts, th._100pct, await getNetBorrowingAmount(MIN_NET_DEBT), carol, carol, 0, {
+        th.openTroveWrapper(contracts, th._100pct, MIN_REDEMPTION_DEBT, carol, carol, 0, {
           from: carol,
           value: dec(1, "ether"),
         }),
@@ -3841,14 +3837,11 @@ contract("BorrowerOperations", async (accounts) => {
       assert.equal(status_Before, 0);
       */
 
-      const BoldRequest = MIN_NET_DEBT;
-      const aliceTroveId = await th.openTroveWrapper(contracts, th._100pct, MIN_NET_DEBT, carol, carol, 0, {
+      const BoldRequest = MIN_REDEMPTION_DEBT;
+      const aliceTroveId = await th.openTroveWrapper(contracts, th._100pct, MIN_REDEMPTION_DEBT, carol, carol, 0, {
         from: alice,
         value: dec(100, "ether"),
       });
-
-      // Get the expected debt based on the Bold request (adding fee and liq. reserve on top)
-      const expectedDebt = BoldRequest.add(BOLD_GAS_COMPENSATION);
 
       const debt_After = await getTroveEntireDebt(aliceTroveId);
       const coll_After = await getTroveEntireColl(aliceTroveId);
@@ -3858,7 +3851,7 @@ contract("BorrowerOperations", async (accounts) => {
       assert.isTrue(coll_After.gt("0"));
       assert.isTrue(debt_After.gt("0"));
 
-      assert.isTrue(debt_After.eq(expectedDebt));
+      assert.isTrue(debt_After.eq(BoldRequest));
 
       // check active status
       assert.equal(status_After, 1);
@@ -4060,7 +4053,7 @@ contract("BorrowerOperations", async (accounts) => {
       const aliceTroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         alice,
         alice,
         0,
@@ -4306,27 +4299,6 @@ contract("BorrowerOperations", async (accounts) => {
       });
     });
 
-    // --- getCompositeDebt ---
-
-    it("getCompositeDebt(): returns debt + gas comp", async () => {
-      const res1 = await borrowerOperations.getCompositeDebt("0");
-      assert.equal(res1, BOLD_GAS_COMPENSATION.toString());
-
-      const res2 = await borrowerOperations.getCompositeDebt(dec(90, 18));
-      th.assertIsApproximatelyEqual(
-        res2,
-        BOLD_GAS_COMPENSATION.add(toBN(dec(90, 18))),
-      );
-
-      const res3 = await borrowerOperations.getCompositeDebt(
-        dec(24423422357345049, 12),
-      );
-      th.assertIsApproximatelyEqual(
-        res3,
-        BOLD_GAS_COMPENSATION.add(toBN(dec(24423422357345049, 12))),
-      );
-    });
-
     //  --- getNewTCRFromTroveChange  - (external wrapper in Tester contract calls internal function) ---
 
     describe("getNewTCRFromTroveChange() returns the correct TCR", async () => {
@@ -4337,8 +4309,8 @@ contract("BorrowerOperations", async (accounts) => {
         const whaleColl = toBN(dec(10000, "ether"));
         const bobTotalDebt = toBN(dec(100000, 18));
         const whaleTotalDebt = toBN(dec(2000, 18));
-        const bobBoldAmount = await getOpenTroveBoldAmount(bobTotalDebt);
-        const whaleBoldAmount = await getOpenTroveBoldAmount(whaleTotalDebt);
+        const bobBoldAmount = bobTotalDebt;
+        const whaleBoldAmount = whaleTotalDebt;
 
         await th.openTroveWrapper(contracts, th._100pct, whaleBoldAmount, whale, whale, 0, {
           from: whale,
@@ -4386,8 +4358,8 @@ contract("BorrowerOperations", async (accounts) => {
         const whaleColl = toBN(dec(10000, "ether"));
         const bobTotalDebt = toBN(dec(100000, 18));
         const whaleTotalDebt = toBN(dec(2000, 18));
-        const bobBoldAmount = await getOpenTroveBoldAmount(bobTotalDebt);
-        const whaleBoldAmount = await getOpenTroveBoldAmount(whaleTotalDebt);
+        const bobBoldAmount = bobTotalDebt;
+        const whaleBoldAmount = whaleTotalDebt;
 
         await th.openTroveWrapper(contracts, th._100pct, whaleBoldAmount, whale, whale, 0, {
           from: whale,
@@ -4436,8 +4408,8 @@ contract("BorrowerOperations", async (accounts) => {
         const whaleColl = toBN(dec(10000, "ether"));
         const bobTotalDebt = toBN(dec(100000, 18));
         const whaleTotalDebt = toBN(dec(2000, 18));
-        const bobBoldAmount = await getOpenTroveBoldAmount(bobTotalDebt);
-        const whaleBoldAmount = await getOpenTroveBoldAmount(whaleTotalDebt);
+        const bobBoldAmount = bobTotalDebt;
+        const whaleBoldAmount = whaleTotalDebt;
 
         await th.openTroveWrapper(contracts, th._100pct, whaleBoldAmount, whale, whale, 0, {
           from: whale,
@@ -4486,8 +4458,8 @@ contract("BorrowerOperations", async (accounts) => {
         const whaleColl = toBN(dec(10000, "ether"));
         const bobTotalDebt = toBN(dec(100000, 18));
         const whaleTotalDebt = toBN(dec(2000, 18));
-        const bobBoldAmount = await getOpenTroveBoldAmount(bobTotalDebt);
-        const whaleBoldAmount = await getOpenTroveBoldAmount(whaleTotalDebt);
+        const bobBoldAmount = bobTotalDebt;
+        const whaleBoldAmount = whaleTotalDebt;
 
         await th.openTroveWrapper(contracts, th._100pct, whaleBoldAmount, whale, whale, 0, {
           from: whale,
@@ -4535,8 +4507,8 @@ contract("BorrowerOperations", async (accounts) => {
         const whaleColl = toBN(dec(10000, "ether"));
         const bobTotalDebt = toBN(dec(100000, 18));
         const whaleTotalDebt = toBN(dec(2000, 18));
-        const bobBoldAmount = await getOpenTroveBoldAmount(bobTotalDebt);
-        const whaleBoldAmount = await getOpenTroveBoldAmount(whaleTotalDebt);
+        const bobBoldAmount = bobTotalDebt;
+        const whaleBoldAmount = whaleTotalDebt;
 
         await th.openTroveWrapper(contracts, th._100pct, whaleBoldAmount, whale, whale, 0, {
           from: whale,
@@ -4585,8 +4557,8 @@ contract("BorrowerOperations", async (accounts) => {
         const whaleColl = toBN(dec(10000, "ether"));
         const bobTotalDebt = toBN(dec(100000, 18));
         const whaleTotalDebt = toBN(dec(2000, 18));
-        const bobBoldAmount = await getOpenTroveBoldAmount(bobTotalDebt);
-        const whaleBoldAmount = await getOpenTroveBoldAmount(whaleTotalDebt);
+        const bobBoldAmount = bobTotalDebt;
+        const whaleBoldAmount = whaleTotalDebt;
 
         await th.openTroveWrapper(contracts, th._100pct, whaleBoldAmount, whale, whale, 0, {
           from: whale,
@@ -4635,8 +4607,8 @@ contract("BorrowerOperations", async (accounts) => {
         const whaleColl = toBN(dec(10000, "ether"));
         const bobTotalDebt = toBN(dec(100000, 18));
         const whaleTotalDebt = toBN(dec(2000, 18));
-        const bobBoldAmount = await getOpenTroveBoldAmount(bobTotalDebt);
-        const whaleBoldAmount = await getOpenTroveBoldAmount(whaleTotalDebt);
+        const bobBoldAmount = bobTotalDebt;
+        const whaleBoldAmount = whaleTotalDebt;
 
         await th.openTroveWrapper(contracts, th._100pct, whaleBoldAmount, whale, whale, 0, {
           from: whale,
@@ -4685,8 +4657,8 @@ contract("BorrowerOperations", async (accounts) => {
         const whaleColl = toBN(dec(10000, "ether"));
         const bobTotalDebt = toBN(dec(100000, 18));
         const whaleTotalDebt = toBN(dec(2000, 18));
-        const bobBoldAmount = await getOpenTroveBoldAmount(bobTotalDebt);
-        const whaleBoldAmount = await getOpenTroveBoldAmount(whaleTotalDebt);
+        const bobBoldAmount = bobTotalDebt;
+        const whaleBoldAmount = whaleTotalDebt;
 
         await th.openTroveWrapper(contracts, th._100pct, whaleBoldAmount, whale, whale, 0, {
           from: whale,
@@ -4735,8 +4707,8 @@ contract("BorrowerOperations", async (accounts) => {
         const whaleColl = toBN(dec(10000, "ether"));
         const bobTotalDebt = toBN(dec(100000, 18));
         const whaleTotalDebt = toBN(dec(2000, 18));
-        const bobBoldAmount = await getOpenTroveBoldAmount(bobTotalDebt);
-        const whaleBoldAmount = await getOpenTroveBoldAmount(whaleTotalDebt);
+        const bobBoldAmount = bobTotalDebt;
+        const whaleBoldAmount = whaleTotalDebt;
 
         await th.openTroveWrapper(contracts, th._100pct, whaleBoldAmount, whale, whale, 0, {
           from: whale,

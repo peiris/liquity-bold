@@ -114,7 +114,7 @@ contract BoldToken is CheckContract, IBoldToken {
     }
 
     function returnFromPool(address _poolAddress, address _receiver, uint256 _amount) external override {
-        _requireCallerIsTroveMorSP();
+        _requireCallerIsStabilityPool();
         _transfer(_poolAddress, _receiver, _amount);
     }
 
@@ -272,13 +272,6 @@ contract BoldToken is CheckContract, IBoldToken {
 
     function _requireCallerIsStabilityPool() internal view {
         require(msg.sender == stabilityPoolAddress, "Bold: Caller is not the StabilityPool");
-    }
-
-    function _requireCallerIsTroveMorSP() internal view {
-        require(
-            msg.sender == troveManagerAddress || msg.sender == stabilityPoolAddress,
-            "Bold: Caller is neither TroveManager nor StabilityPool"
-        );
     }
 
     // --- Optional functions ---

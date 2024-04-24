@@ -28,8 +28,6 @@ interface ITroveManager is IERC721, ILiquityBase {
     function sortedTroves() external view returns (ISortedTroves);
     function borrowerOperationsAddress() external view returns (address);
 
-    // function BOLD_GAS_COMPENSATION() external view returns (uint256);
-
     function baseRate() external view returns (uint256);
 
     function getTroveIdsCount() external view returns (uint256);
@@ -102,7 +100,9 @@ interface ITroveManager is IERC721, ILiquityBase {
         uint256 _troveId,
         uint256 _coll,
         uint256 _debt,
-        uint256 _annualInterestRate
+        uint256 _annualInterestRate,
+        uint256 _upperHint,
+        uint256 _lowerHint
     ) external returns (uint256, uint256);
 
     function troveIsStale(uint256 _troveId) external view returns (bool);

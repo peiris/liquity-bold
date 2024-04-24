@@ -45,8 +45,6 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
 
   const ZERO_ADDRESS = th.ZERO_ADDRESS;
 
-  const getOpenTroveBoldAmount = async (totalDebt) => th.getOpenTroveBoldAmount(contracts, totalDebt);
-
   const deployFixture = createDeployAndFundFixture({
     accounts: fundedAccounts,
     mocks: { TroveManager: TroveManagerTester },
@@ -69,7 +67,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // --- Identical deposits, identical liquidation amounts---
     it("withdrawFromSP(): Depositors with equal initial deposit withdraw correct compounded deposit and ETH Gain after one liquidation", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -85,7 +83,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -119,7 +117,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
 
     it("withdrawFromSP(): Depositors with equal initial deposit withdraw correct compounded deposit and ETH Gain after two identical liquidations", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -135,7 +133,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -144,7 +142,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -178,7 +176,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
 
     it("withdrawFromSP():  Depositors with equal initial deposit withdraw correct compounded deposit and ETH Gain after three identical liquidations", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -194,7 +192,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -203,7 +201,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -212,7 +210,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_3,
         defaulter_3,
         0,
@@ -249,7 +247,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // --- Identical deposits, increasing liquidation amounts ---
     it("withdrawFromSP(): Depositors with equal initial deposit withdraw correct compounded deposit and ETH Gain after two liquidations of increasing Bold", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -265,7 +263,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(5000, 18)),
+        dec(5000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -274,7 +272,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(7000, 18)),
+        dec(7000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -310,7 +308,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
 
     it("withdrawFromSP(): Depositors with equal initial deposit withdraw correct compounded deposit and ETH Gain after three liquidations of increasing Bold", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -326,7 +324,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(5000, 18)),
+        dec(5000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -335,7 +333,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(6000, 18)),
+        dec(6000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -344,7 +342,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(7000, 18)),
+        dec(7000, 18),
         defaulter_3,
         defaulter_3,
         0,
@@ -382,7 +380,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // --- Increasing deposits, identical liquidation amounts ---
     it("withdrawFromSP(): Depositors with varying deposits withdraw correct compounded deposit and ETH Gain after two identical liquidations", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -399,7 +397,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -408,7 +406,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -449,7 +447,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
 
     it("withdrawFromSP(): Depositors with varying deposits withdraw correct compounded deposit and ETH Gain after three identical liquidations", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -466,7 +464,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -475,7 +473,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -484,7 +482,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_3,
         defaulter_3,
         0,
@@ -530,7 +528,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(1000000, 18)),
+        dec(1000000, 18),
         whale,
         whale,
         0,
@@ -558,7 +556,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount("207000000000000000000000"),
+        "207000000000000000000000",
         defaulter_1,
         defaulter_1,
         0,
@@ -567,7 +565,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(5, 21)),
+        dec(5, 21),
         defaulter_2,
         defaulter_2,
         0,
@@ -576,7 +574,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount("46700000000000000000000"),
+        "46700000000000000000000",
         defaulter_3,
         defaulter_3,
         0,
@@ -625,7 +623,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
 
     it("withdrawFromSP(): A, B, C Deposit -> 2 liquidations -> D deposits -> 1 liquidation. All deposits and liquidations = 100 Bold.  A, B, C, D withdraw correct Bold deposit and ETH Gain", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -641,7 +639,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -650,7 +648,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -659,7 +657,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_3,
         defaulter_3,
         0,
@@ -715,7 +713,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
 
     it("withdrawFromSP(): A, B, C Deposit -> 2 liquidations -> D deposits -> 2 liquidations. All deposits and liquidations = 100 Bold.  A, B, C, D withdraw correct Bold deposit and ETH Gain", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -731,7 +729,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -740,7 +738,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -749,7 +747,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_3,
         defaulter_3,
         0,
@@ -758,7 +756,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_4_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_4,
         defaulter_4,
         0,
@@ -807,7 +805,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(1000000, 18)),
+        dec(1000000, 18),
         whale,
         whale,
         0,
@@ -836,7 +834,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -845,7 +843,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(25000, 18)),
+        dec(25000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -854,7 +852,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(5000, 18)),
+        dec(5000, 18),
         defaulter_3,
         defaulter_3,
         0,
@@ -863,7 +861,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_4_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(40000, 18)),
+        dec(40000, 18),
         defaulter_4,
         defaulter_4,
         0,
@@ -925,7 +923,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
 
     it("withdrawFromSP(): A, B, C, D deposit -> 2 liquidations -> D withdraws -> 2 liquidations. All deposits and liquidations = 100 Bold.  A, B, C, D withdraw correct Bold deposit and ETH Gain", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -941,7 +939,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -950,7 +948,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -959,7 +957,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_3,
         defaulter_3,
         0,
@@ -968,7 +966,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_4_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_4,
         defaulter_4,
         0,
@@ -1019,7 +1017,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
 
     it("withdrawFromSP(): A, B, C, D deposit -> 2 liquidations -> D withdraws -> 2 liquidations. Various deposit and liquidation vals. A, B, C, D withdraw correct Bold deposit and ETH Gain", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -1049,7 +1047,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -1058,7 +1056,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(20000, 18)),
+        dec(20000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -1067,7 +1065,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(30000, 18)),
+        dec(30000, 18),
         defaulter_3,
         defaulter_3,
         0,
@@ -1076,7 +1074,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_4_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(5000, 18)),
+        dec(5000, 18),
         defaulter_4,
         defaulter_4,
         0,
@@ -1139,7 +1137,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // --- One deposit enters at t > 0, and another leaves later ---
     it("withdrawFromSP(): A, B, D deposit -> 2 liquidations -> C makes deposit -> 1 liquidation -> D withdraws -> 1 liquidation. All deposits: 100 Bold. Liquidations: 100,100,100,50.  A, B, C, D withdraw correct Bold deposit and ETH Gain", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -1155,7 +1153,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -1164,7 +1162,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -1173,7 +1171,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_3,
         defaulter_3,
         0,
@@ -1182,7 +1180,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_4_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(5000, 18)),
+        dec(5000, 18),
         defaulter_4,
         defaulter_4,
         0,
@@ -1249,7 +1247,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // C, D withdraw 5000Bold  & 500e
     it("withdrawFromSP(): Depositor withdraws correct compounded deposit after liquidation empties the pool", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -1265,7 +1263,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(20000, 18)),
+        dec(20000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -1274,7 +1272,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -1341,7 +1339,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // L2 20000, 200 empties Pool
     it("withdrawFromSP(): Pool-emptying liquidation increases epoch by one, resets scaleFactor to 0, and resets P to 1e18", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -1357,7 +1355,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -1366,7 +1364,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -1375,7 +1373,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_3,
         defaulter_3,
         0,
@@ -1384,7 +1382,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_4_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_4,
         defaulter_4,
         0,
@@ -1467,7 +1465,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // C, D withdraw 5000 Bold  & 50e
     it("withdrawFromSP(): Depositors withdraw correct compounded deposit after liquidation empties the pool", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -1483,7 +1481,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(20000, 18)),
+        dec(20000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -1492,7 +1490,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -1562,7 +1560,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // Expect A to withdraw 0 deposit and ether only from reward L1
     it("withdrawFromSP(): single deposit fully offset. After subsequent liquidations, depositor withdraws 0 deposit and *only* the ETH Gain from one liquidation", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -1574,7 +1572,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -1583,7 +1581,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -1592,7 +1590,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(10000, 18)),
+        dec(10000, 18),
         defaulter_3,
         defaulter_3,
         0,
@@ -1631,7 +1629,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
 
     it("withdrawFromSP(): Depositor withdraws correct compounded deposit after liquidation empties the pool", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -1640,7 +1638,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(20000, 18)),
+        dec(20000, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -1649,7 +1647,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(20000, 18)),
+        dec(20000, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -1658,7 +1656,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(20000, 18)),
+        dec(20000, 18),
         defaulter_3,
         defaulter_3,
         0,
@@ -1667,7 +1665,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_4_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(20000, 18)),
+        dec(20000, 18),
         defaulter_4,
         defaulter_4,
         0,
@@ -1775,7 +1773,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // in helper functon getOpenTroveBoldAmount due to now-zero borrow fees. Double-check this when we write new SP arithmetic tests and fix the "P" issue.
     it.skip("withdrawFromSP(): deposit spans one scale factor change: Single depositor withdraws correct compounded deposit and ETH Gain after one liquidation", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -1787,7 +1785,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount("9999999910000000000000"),
+        "9999999910000000000000",
         defaulter_1,
         defaulter_1,
         0,
@@ -1800,7 +1798,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(9900, 18)),
+        dec(9900, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -1851,7 +1849,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // in helper functon getOpenTroveBoldAmount due to now-zero borrow fees. Double-check this when we write new SP arithmetic tests and fix the "P" issue.
     it.skip("withdrawFromSP(): Several deposits of varying amounts span one scale factor change. Depositors withdraw correct compounded deposit and ETH Gain after one liquidation", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -1863,7 +1861,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount("9999999910000000000000"),
+        "9999999910000000000000",
         defaulter_1,
         defaulter_1,
         0,
@@ -1874,7 +1872,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount("59400000000000000000000"),
+        "59400000000000000000000",
         defaulter_2,
         defaulter_2,
         0,
@@ -1952,7 +1950,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // in helper functon getOpenTroveBoldAmount due to now-zero borrow fees. Double-check this when we write new SP arithmetic tests and fix the "P" issue.
     it.skip("withdrawFromSP(): deposit spans one scale factor change: Single depositor withdraws correct compounded deposit and ETH Gain after one liquidation", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -1964,7 +1962,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(99999, 17)),
+        dec(99999, 17),
         defaulter_1,
         defaulter_1,
         0,
@@ -1973,7 +1971,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(99999, 17)),
+        dec(99999, 17),
         defaulter_2,
         defaulter_2,
         0,
@@ -2027,7 +2025,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // in helper functon getOpenTroveBoldAmount due to now-zero borrow fees. Double-check this when we write new SP arithmetic tests and fix the "P" issue.
     it.skip("withdrawFromSP(): Several deposits of varying amounts span one scale factor change. Depositors withdraws correct compounded deposit and ETH Gain after one liquidation", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -2039,7 +2037,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount("9999900000000000000000"),
+        "9999900000000000000000",
         defaulter_1,
         defaulter_1,
         0,
@@ -2048,7 +2046,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount("59999400000000000000000"),
+        "59999400000000000000000",
         defaulter_2,
         defaulter_2,
         0,
@@ -2110,7 +2108,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // Expect A to withdraw 0 deposit
     it("withdrawFromSP(): Deposit that decreases to less than 1e-9 of it's original value is reduced to 0", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -2119,7 +2117,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount("9999999999900000000000"),
+        "9999999999900000000000",
         defaulter_1,
         defaulter_1,
         0,
@@ -2157,7 +2155,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // in helper functon getOpenTroveBoldAmount due to now-zero borrow fees. Double-check this when we write new SP arithmetic tests and fix the "P" issue.
     it.skip("withdrawFromSP(): Several deposits of 10000 Bold span one scale factor change. Depositors withdraws correct compounded deposit and ETH Gain after one liquidation", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -2166,7 +2164,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount("9999900000000000000000"),
+        "9999900000000000000000",
         defaulter_1,
         defaulter_1,
         0,
@@ -2175,7 +2173,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount("9999900000000000000000"),
+        "9999900000000000000000",
         defaulter_2,
         defaulter_2,
         0,
@@ -2184,7 +2182,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount("9999900000000000000000"),
+        "9999900000000000000000",
         defaulter_3,
         defaulter_3,
         0,
@@ -2193,7 +2191,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_4_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount("9999900000000000000000"),
+        "9999900000000000000000",
         defaulter_4,
         defaulter_4,
         0,
@@ -2270,7 +2268,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
 
     it("withdrawFromSP(): 2 depositors can withdraw after each receiving half of a pool-emptying liquidation", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -2279,7 +2277,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(24100, 18)),
+        dec(24100, 18),
         defaulter_1,
         defaulter_1,
         0,
@@ -2288,7 +2286,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(24300, 18)),
+        dec(24300, 18),
         defaulter_2,
         defaulter_2,
         0,
@@ -2297,7 +2295,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(24500, 18)),
+        dec(24500, 18),
         defaulter_3,
         defaulter_3,
         0,
@@ -2425,7 +2423,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // in helper functon getOpenTroveBoldAmount due to now-zero borrow fees. Double-check this when we write new SP arithmetic tests and fix the "P" issue.
     it.skip("withdrawFromSP(): Depositor's ETH gain stops increasing after two scale changes", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -2434,7 +2432,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(99999, 17)),
+        dec(99999, 17),
         defaulter_1,
         defaulter_1,
         0,
@@ -2443,7 +2441,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_2_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(99999, 17)),
+        dec(99999, 17),
         defaulter_2,
         defaulter_2,
         0,
@@ -2452,7 +2450,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_3_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(99999, 17)),
+        dec(99999, 17),
         defaulter_3,
         defaulter_3,
         0,
@@ -2461,7 +2459,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_4_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(99999, 17)),
+        dec(99999, 17),
         defaulter_4,
         defaulter_4,
         0,
@@ -2470,7 +2468,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_5_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(99999, 17)),
+        dec(99999, 17),
         defaulter_5,
         defaulter_5,
         0,
@@ -2544,7 +2542,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
 
     it("withdrawFromSP(): Large liquidated coll/debt, deposits and ETH price", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -2565,7 +2563,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(1, 36)),
+        dec(1, 36),
         defaulter_1,
         defaulter_1,
         0,
@@ -2615,7 +2613,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
     // Double-check this when we write new SP arithmetic tests and fix the "P" issue.
     it.skip("withdrawFromSP(): Small liquidated coll/debt, large deposits and ETH price", async () => {
       // Whale opens Trove with 100k ETH
-      await th.openTroveWrapper(contracts, th._100pct, await getOpenTroveBoldAmount(dec(100000, 18)), whale, whale, 0, {
+      await th.openTroveWrapper(contracts, th._100pct, dec(100000, 18), whale, whale, 0, {
         from: whale,
         value: dec(100000, "ether"),
       });
@@ -2637,7 +2635,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       const defaulter_1_TroveId = await th.openTroveWrapper(
         contracts,
         th._100pct,
-        await getOpenTroveBoldAmount(dec(5000, 18)),
+        dec(5000, 18),
         defaulter_1,
         defaulter_1,
         0,

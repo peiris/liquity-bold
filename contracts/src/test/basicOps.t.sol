@@ -8,7 +8,7 @@ contract BasicOps is DevTestSetup {
 
         vm.startPrank(G);
         vm.expectRevert("ERC20: insufficient allowance");
-        borrowerOperations.openTrove(G, 0, 1e18, 2e18, 2000e18, 0, 0, 0);
+        borrowerOperations.openTrove(G, 0, 1e18, 3 ether, 2000e18, 0, 0, 0);
         vm.stopPrank();
     }
 
@@ -16,9 +16,9 @@ contract BasicOps is DevTestSetup {
         priceFeed.setPrice(2000e18);
 
         vm.startPrank(G);
-        WETH.approve(address(borrowerOperations), 2e18);
+        WETH.approve(address(borrowerOperations), 3 ether);
         vm.expectRevert("ERC20: transfer amount exceeds balance");
-        borrowerOperations.openTrove(G, 0, 1e18, 2e18, 2000e18, 0, 0, 0);
+        borrowerOperations.openTrove(G, 0, 1e18, 3 ether, 2000e18, 0, 0, 0);
         vm.stopPrank();
     }
 
@@ -28,7 +28,7 @@ contract BasicOps is DevTestSetup {
         assertEq(trovesCount, 0);
 
         vm.startPrank(A);
-        borrowerOperations.openTrove(A, 0, 1e18, 2e18, 2000e18, 0, 0, 0);
+        borrowerOperations.openTrove(A, 0, 1e18, 3 ether, 2000e18, 0, 0, 0);
 
         trovesCount = troveManager.getTroveIdsCount();
         assertEq(trovesCount, 1);
@@ -37,11 +37,11 @@ contract BasicOps is DevTestSetup {
     function testCloseTrove() public {
         priceFeed.setPrice(2000e18);
         vm.startPrank(A);
-        borrowerOperations.openTrove(A, 0, 1e18, 2e18, 2000e18, 0, 0, 0);
+        borrowerOperations.openTrove(A, 0, 1e18, 3 ether, 2000e18, 0, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(B);
-        uint256 B_Id = borrowerOperations.openTrove(B, 0, 1e18, 2e18, 2000e18, 0, 0, 0);
+        uint256 B_Id = borrowerOperations.openTrove(B, 0, 1e18, 3 ether, 2000e18, 0, 0, 0);
 
         uint256 trovesCount = troveManager.getTroveIdsCount();
         assertEq(trovesCount, 2);
@@ -58,7 +58,7 @@ contract BasicOps is DevTestSetup {
     function testAdjustTrove() public {
         priceFeed.setPrice(2000e18);
         vm.startPrank(A);
-        uint256 A_Id = borrowerOperations.openTrove(A, 0, 1e18, 2e18, 2000e18, 0, 0, 0);
+        uint256 A_Id = borrowerOperations.openTrove(A, 0, 1e18, 3 ether, 2000e18, 0, 0, 0);
 
         // Check Trove coll and debt
         uint256 debt_1 = troveManager.getTroveDebt(A_Id);
@@ -110,18 +110,19 @@ contract BasicOps is DevTestSetup {
     function testLiquidation() public {
         priceFeed.setPrice(2000e18);
         vm.startPrank(A);
-        uint256 A_Id = borrowerOperations.openTrove(A, 0, 1e18, 2e18, 2000e18, 0, 0, 0);
+        uint256 A_Id = borrowerOperations.openTrove(A, 0, 1e18, 3 ether, 3000e18, 0, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(B);
         borrowerOperations.openTrove(B, 0, 1e18, 10e18, 2000e18, 0, 0, 0);
 
         // Price drops
-        priceFeed.setPrice(1200e18);
+        priceFeed.setPrice(1050e18);
         uint256 price = priceFeed.fetchPrice();
 
         // Check CR_A < MCR and TCR > CCR
-        assertLt(troveManager.getCurrentICR(A_Id, price), MCR);
+        console.log(troveManager.getCurrentICR(A_Id, price), "troveManager.getCurrentICR(A_Id, price)");
+        assertLt(troveManager.getCurrentICR(A_Id, price), MCR, "A ICR should be below MCR");
         assertGt(troveManager.getTCR(price), CCR);
 
         uint256 trovesCount = troveManager.getTroveIdsCount();
@@ -137,7 +138,7 @@ contract BasicOps is DevTestSetup {
     function testSPDeposit() public {
         priceFeed.setPrice(2000e18);
         vm.startPrank(A);
-        borrowerOperations.openTrove(A, 0, 1e18, 2e18, 2000e18, 0, 0, 0);
+        borrowerOperations.openTrove(A, 0, 1e18, 3 ether, 2000e18, 0, 0, 0);
 
         // A makes an SP deposit
         stabilityPool.provideToSP(100e18);
@@ -156,7 +157,7 @@ contract BasicOps is DevTestSetup {
     function testSPWithdrawal() public {
         priceFeed.setPrice(2000e18);
         vm.startPrank(A);
-        borrowerOperations.openTrove(A, 0, 1e18, 2e18, 2000e18, 0, 0, 0);
+        borrowerOperations.openTrove(A, 0, 1e18, 3 ether, 2000e18, 0, 0, 0);
 
         // A makes an SP deposit
         stabilityPool.provideToSP(100e18);

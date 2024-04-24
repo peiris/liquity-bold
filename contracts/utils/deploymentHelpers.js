@@ -60,12 +60,12 @@ class DeploymentHelper {
     const borrowerOperations = await Contracts.BorrowerOperations.new(WETH.address);
     const collSurplusPool = await Contracts.CollSurplusPool.new(WETH.address);
     const defaultPool = await Contracts.DefaultPool.new(WETH.address);
-    const gasPool = await Contracts.GasPool.new();
     const priceFeedTestnet = await Contracts.PriceFeedTestnet.new();
     const priceFeed = await Contracts.PriceFeedMock.new();
     const sortedTroves = await Contracts.SortedTroves.new();
     const stabilityPool = await Contracts.StabilityPool.new(WETH.address);
-    const troveManager = await Contracts.TroveManager.new();
+    const troveManager = await Contracts.TroveManager.new(WETH.address);
+    const gasPool = await Contracts.GasPool.new(WETH.address, borrowerOperations.address, troveManager.address);
 
     const { boldToken } = await this.deployBoldToken({
       troveManager,

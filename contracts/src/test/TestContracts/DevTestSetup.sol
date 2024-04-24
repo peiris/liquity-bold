@@ -65,7 +65,7 @@ contract DevTestSetup is BaseTest {
     function _setupForWithdrawETHGainToTrove() internal returns (uint256, uint256, uint256) {
         uint256 troveDebtRequest_A = 2000e18;
         uint256 troveDebtRequest_B = 3000e18;
-        uint256 troveDebtRequest_C = 4500e18;
+        uint256 troveDebtRequest_C = 4700e18;
         uint256 interestRate = 5e16; // 5%
 
         uint256 price = 2000e18;
@@ -104,8 +104,8 @@ contract DevTestSetup is BaseTest {
     function _setupForBatchLiquidateTrovesPureOffset() internal returns (uint256, uint256, uint256, uint256) {
         uint256 troveDebtRequest_A = 2000e18;
         uint256 troveDebtRequest_B = 3000e18;
-        uint256 troveDebtRequest_C = 2250e18;
-        uint256 troveDebtRequest_D = 2250e18;
+        uint256 troveDebtRequest_C = 2940e18;
+        uint256 troveDebtRequest_D = 2940e18;
         uint256 interestRate = 5e16; // 5%
 
         uint256 price = 2000e18;
@@ -113,8 +113,8 @@ contract DevTestSetup is BaseTest {
 
         uint256 ATroveId = openTroveNoHints100pctMaxFee(A, 5 ether, troveDebtRequest_A, interestRate);
         uint256 BTroveId = openTroveNoHints100pctMaxFee(B, 5 ether, troveDebtRequest_B, interestRate);
-        uint256 CTroveId = openTroveNoHints100pctMaxFee(C, 25e17, troveDebtRequest_C, interestRate);
-        uint256 DTroveId = openTroveNoHints100pctMaxFee(D, 25e17, troveDebtRequest_D, interestRate);
+        uint256 CTroveId = openTroveNoHints100pctMaxFee(C, 3e18, troveDebtRequest_C, interestRate);
+        uint256 DTroveId = openTroveNoHints100pctMaxFee(D, 3e18, troveDebtRequest_D, interestRate);
 
         // console.log(troveManager.getTCR(price), "TCR");
         // console.log(troveManager.getCurrentICR(CTroveId, price), "C CR");
@@ -137,8 +137,8 @@ contract DevTestSetup is BaseTest {
     function _setupForBatchLiquidateTrovesPureRedist() internal returns (uint256, uint256, uint256, uint256) {
         uint256 troveDebtRequest_A = 2000e18;
         uint256 troveDebtRequest_B = 3000e18;
-        uint256 troveDebtRequest_C = 2250e18;
-        uint256 troveDebtRequest_D = 2250e18;
+        uint256 troveDebtRequest_C = 2940e18;
+        uint256 troveDebtRequest_D = 2940e18;
         uint256 interestRate = 5e16; // 5%
 
         uint256 price = 2000e18;
@@ -146,8 +146,8 @@ contract DevTestSetup is BaseTest {
 
         uint256 ATroveId = openTroveNoHints100pctMaxFee(A, 5 ether, troveDebtRequest_A, interestRate);
         uint256 BTroveId = openTroveNoHints100pctMaxFee(B, 5 ether, troveDebtRequest_B, interestRate);
-        uint256 CTroveId = openTroveNoHints100pctMaxFee(C, 25e17, troveDebtRequest_C, interestRate);
-        uint256 DTroveId = openTroveNoHints100pctMaxFee(D, 25e17, troveDebtRequest_D, interestRate);
+        uint256 CTroveId = openTroveNoHints100pctMaxFee(C, 3e18, troveDebtRequest_C, interestRate);
+        uint256 DTroveId = openTroveNoHints100pctMaxFee(D, 3e18, troveDebtRequest_D, interestRate);
 
         // Price drops, C and D become liquidateable
         price = 1050e18;
