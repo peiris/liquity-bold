@@ -245,7 +245,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
     event CollSurplusPoolAddressChanged(address _collSurplusPoolAddress);
     event SortedTrovesAddressChanged(address _sortedTrovesAddress);
 
-    event Liquidation(uint256 _liquidatedDebt, uint256 _liquidatedColl, uint256 _collGasCompensation);
+    event Liquidation(uint256 _liquidatedDebt, uint256 _liquidatedColl);
     event Redemption(uint256 _attemptedBoldAmount, uint256 _actualBoldAmount, uint256 _ETHSent, uint256 _ETHFee);
     event TroveUpdated(
         uint256 indexed _troveId, uint256 _debt, uint256 _coll, uint256 _stake, TroveManagerOperation _operation
@@ -371,9 +371,8 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         );
         _removeStake(_troveId);
 
-        singleLiquidation.collGasCompensation = _getCollGasCompensation(singleLiquidation.entireTroveColl);
-        singleLiquidation.CollGasPoolCompensation = COLL_GASPOOL_COMPENSATION;
-        uint256 collToLiquidate = singleLiquidation.entireTroveColl - singleLiquidation.collGasCompensation;
+        // Calc gas compensation, and return GasPool portion if not needed
+        uint256 collToLiquidate = _handleGasCompensation(singleLiquidation, _troveId);
 
         (
             singleLiquidation.debtToOffset,
@@ -417,7 +416,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         //TODO - GAS: We already read this inside getEntireDebtAndColl - so add it to the returned vals?
         singleLiquidation.recordedTroveDebt = Troves[_troveId].debt;
 
-        singleLiquidation.collGasCompensation = _getCollGasCompensation(singleLiquidation.entireTroveColl);
+        singleLiquidation.collGasCompensation = _getCollGasCompensation();
         singleLiquidation.CollGasPoolCompensation = COLL_GASPOOL_COMPENSATION;
         vars.collToLiquidate = singleLiquidation.entireTroveColl - singleLiquidation.collGasCompensation;
 
@@ -507,6 +506,27 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         return singleLiquidation;
     }
 
+    function _handleGasCompensation(LiquidationValues memory singleLiquidation, uint256 _troveId) internal returns (uint256) {
+        uint256 collGasCompensation = _getCollGasCompensation();
+        uint256 collToLiquidate = singleLiquidation.entireTroveColl - collGasCompensation;
+        uint256 collGasPoolCompensation;
+        // If the regular (from gas and base fee formula) compensation is less than 10%,
+        // i.e., less than the compensation for the SP/redistribution,
+        // we return the initial gas compensation held in the GasPool to the Trove owner ...
+        if (collGasCompensation < singleLiquidation.entireTroveColl * (MCR - DECIMAL_PRECISION) / DECIMAL_PRECISION) {
+            ETH.safeTransferFrom(gasPoolAddress, ownerOf(_troveId), COLL_GASPOOL_COMPENSATION);
+        } else {
+            // ... Otherwise, we add it to the Trove coll to be liquidated
+            collToLiquidate += COLL_GASPOOL_COMPENSATION;
+            collGasPoolCompensation = COLL_GASPOOL_COMPENSATION;
+        }
+
+        singleLiquidation.collGasCompensation = collGasCompensation;
+        singleLiquidation.CollGasPoolCompensation = collGasPoolCompensation;
+
+        return collToLiquidate;
+    }
+
     /* In a full liquidation, returns the values for a trove's coll and debt to be offset, and coll and debt to be
     * redistributed to active troves.
     */
@@ -551,14 +571,14 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         uint256 _recordedTroveDebt,
         uint256 _weightedRecordedTroveDebt,
         uint256 _price
-    ) internal pure returns (LiquidationValues memory singleLiquidation) {
+    ) internal view returns (LiquidationValues memory singleLiquidation) {
         singleLiquidation.entireTroveDebt = _entireTroveDebt;
         singleLiquidation.entireTroveColl = _entireTroveColl;
         singleLiquidation.recordedTroveDebt = _recordedTroveDebt;
         singleLiquidation.weightedRecordedTroveDebt = _weightedRecordedTroveDebt;
         uint256 cappedCollPortion = _entireTroveDebt * MCR / _price;
 
-        singleLiquidation.collGasCompensation = _getCollGasCompensation(cappedCollPortion);
+        singleLiquidation.collGasCompensation = _getCollGasCompensation();
         singleLiquidation.CollGasPoolCompensation = COLL_GASPOOL_COMPENSATION;
 
         singleLiquidation.debtToOffset = _entireTroveDebt;
@@ -728,8 +748,8 @@ contract TroveManager is ERC721, LiquityBase, Ownable, CheckContract, ITroveMana
         vars.liquidatedColl = totals.totalCollInSequence - totals.totalCollGasCompensation - totals.totalCollSurplus;
         emit Liquidation(
             vars.liquidatedDebt,
-            vars.liquidatedColl,
-            totals.totalCollGasCompensation + totals.totalCollGasPoolCompensation
+            vars.liquidatedColl
+            //totals.totalCollGasCompensation + totals.totalCollGasPoolCompensation
         );
 
         // Send gas compensation to caller

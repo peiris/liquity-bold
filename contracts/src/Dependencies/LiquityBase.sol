@@ -30,6 +30,10 @@ contract LiquityBase is BaseMath, ILiquityBase {
     uint256 public constant MIN_COLL = 3e18; // 3 ETH
     // Amount of collateral to be locked in gas pool on opening troves
     uint256 public constant COLL_GASPOOL_COMPENSATION = 3e17; // 0.3 ETH
+    uint256 public constant GAS_COMPENSATION_TIP = 5 gwei;
+    // Warning! This is not a good practice in general, but we suffer the observer effect here.
+    // We have to choose a generous value, to make sure that eventual changes in opcode prices don’t make liquidations unprofitable!
+    uint256 public constant LIQUIDATION_GAS_AMOUNT = 300000;
     // Below this amount, troves will be tagged as zombi and removed from Sorted List
     uint256 public constant MIN_REDEMPTION_DEBT = 2000e18; // 2k Bold
 
@@ -48,8 +52,8 @@ contract LiquityBase is BaseMath, ILiquityBase {
     // --- Gas compensation functions ---
 
     // Return the amount of ETH to be drawn from a trove's collateral and sent as gas compensation.
-    function _getCollGasCompensation(uint256 _entireColl) internal pure returns (uint256) {
-        return _entireColl / PERCENT_DIVISOR;
+    function _getCollGasCompensation() internal view returns (uint256) {
+        return LIQUIDATION_GAS_AMOUNT * (block.basefee + GAS_COMPENSATION_TIP);
     }
 
     function getEntireSystemColl() public view returns (uint256 entireSystemColl) {
