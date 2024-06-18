@@ -9,7 +9,7 @@ import "../Interfaces/IDefaultPool.sol";
 import "../Interfaces/IPriceFeed.sol";
 import "../Interfaces/ILiquityBase.sol";
 
-//import "forge-std/console2.sol";
+// import "forge-std/console2.sol";
 
 /*
 * Base contract for TroveManager, BorrowerOperations and StabilityPool. Contains global system constants and
@@ -24,14 +24,14 @@ contract LiquityBase is ILiquityBase {
 
     // --- Gas compensation functions ---
 
-    // Return the amount of ETH to be drawn from a trove's collateral and sent as gas compensation.
+    // Return the amount of Coll to be drawn from a trove's collateral and sent as gas compensation.
     function _getCollGasCompensation(uint256 _entireColl) internal pure returns (uint256) {
         return _entireColl / COLL_GAS_COMPENSATION_DIVISOR;
     }
 
     function getEntireSystemColl() public view returns (uint256 entireSystemColl) {
-        uint256 activeColl = activePool.getETHBalance();
-        uint256 liquidatedColl = defaultPool.getETHBalance();
+        uint256 activeColl = activePool.getCollBalance();
+        uint256 liquidatedColl = defaultPool.getCollBalance();
 
         return activeColl + liquidatedColl;
     }

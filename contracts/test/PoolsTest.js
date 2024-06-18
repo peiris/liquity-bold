@@ -34,9 +34,9 @@ contract("StabilityPool", async (accounts) => {
     return stabilityPool;
   };
 
-  it("getETHBalance(): gets the recorded ETH balance", async () => {
+  it("getCollBalance(): gets the recorded ETH balance", async () => {
     const stabilityPool = await loadFixture(deployFixture);
-    const recordedETHBalance = await stabilityPool.getETHBalance();
+    const recordedETHBalance = await stabilityPool.getCollBalance();
     assert.equal(recordedETHBalance, 0);
   });
 
@@ -78,8 +78,8 @@ contract("ActivePool", async (accounts) => {
     mockTroveManager = result.mockTroveManager;
   });
 
-  it("getETHBalance(): gets the recorded ETH balance", async () => {
-    const recordedETHBalance = await activePool.getETHBalance();
+  it("getCollBalance(): gets the recorded ETH balance", async () => {
+    const recordedETHBalance = await activePool.getCollBalance();
     assert.equal(recordedETHBalance, 0);
   });
 
@@ -154,8 +154,8 @@ contract("DefaultPool", async (accounts) => {
     mockActivePool = result.mockActivePool;
   });
 
-  it("getETHBalance(): gets the recorded BOLD balance", async () => {
-    const recordedETHBalance = await defaultPool.getETHBalance();
+  it("getCollBalance(): gets the recorded BOLD balance", async () => {
+    const recordedETHBalance = await defaultPool.getCollBalance();
     assert.equal(recordedETHBalance, 0);
   });
 

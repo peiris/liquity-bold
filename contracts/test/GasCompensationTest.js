@@ -490,7 +490,7 @@ contract("Gas compensation tests", async (accounts) => {
     assert.isTrue(BoldinSP_A.lte(BoldinSP_0));
 
     // Check ETH in SP has received the liquidation
-    const ETHinSP_A = await stabilityPool.getETHBalance();
+    const ETHinSP_A = await stabilityPool.getCollBalance();
     assert.equal(ETHinSP_A.toString(), aliceColl.sub(_0pt5percent_aliceColl)); // 1 ETH - 0.5%
 
     // --- Price drops to 3 ---
@@ -526,7 +526,7 @@ contract("Gas compensation tests", async (accounts) => {
     assert.isTrue(BoldinSP_B.lt(BoldinSP_A));
 
     // Check ETH in SP has received the liquidation
-    const ETHinSP_B = await stabilityPool.getETHBalance();
+    const ETHinSP_B = await stabilityPool.getCollBalance();
     assert.equal(
       ETHinSP_B.toString(),
       aliceColl
@@ -569,7 +569,7 @@ contract("Gas compensation tests", async (accounts) => {
     assert.isTrue(BoldinSP_C.lt(BoldinSP_B));
 
     // Check ETH in SP has not changed due to the lquidation of C
-    const ETHinSP_C = await stabilityPool.getETHBalance();
+    const ETHinSP_C = await stabilityPool.getCollBalance();
     assert.equal(
       ETHinSP_C.toString(),
       aliceColl
@@ -623,7 +623,7 @@ contract("Gas compensation tests", async (accounts) => {
     });
 
     const BoldinSP_0 = await stabilityPool.getTotalBoldDeposits();
-    const ETHinSP_0 = await stabilityPool.getETHBalance();
+    const ETHinSP_0 = await stabilityPool.getCollBalance();
 
     // --- Price drops to 199.999 ---
     await priceFeed.setPrice("199999000000000000000");
@@ -667,7 +667,7 @@ contract("Gas compensation tests", async (accounts) => {
 
     // Check ETH in SP has increased by the remainder of B's coll
     const collRemainder_A = aliceColl.sub(_0pt5percent_aliceColl);
-    const ETHinSP_A = await stabilityPool.getETHBalance();
+    const ETHinSP_A = await stabilityPool.getCollBalance();
 
     const SPETHIncrease_A = ETHinSP_A.sub(ETHinSP_0);
 
@@ -715,7 +715,7 @@ contract("Gas compensation tests", async (accounts) => {
 
     // Check ETH in SP has increased by the remainder of B's coll
     const collRemainder_B = bobColl.sub(_0pt5percent_bobColl);
-    const ETHinSP_B = await stabilityPool.getETHBalance();
+    const ETHinSP_B = await stabilityPool.getCollBalance();
 
     const SPETHIncrease_B = ETHinSP_B.sub(ETHinSP_A);
 
@@ -765,7 +765,7 @@ contract("Gas compensation tests", async (accounts) => {
     });
 
     const BoldinSP_0 = await stabilityPool.getTotalBoldDeposits();
-    const ETHinSP_0 = await stabilityPool.getETHBalance();
+    const ETHinSP_0 = await stabilityPool.getCollBalance();
 
     await priceFeed.setPrice(dec(200, 18));
     const price_1 = await priceFeed.getPrice();
@@ -808,7 +808,7 @@ contract("Gas compensation tests", async (accounts) => {
 
     // Check ETH in SP has increased by the remainder of A's coll
     const collRemainder_A = aliceColl.sub(_0pt5percent_aliceColl);
-    const ETHinSP_A = await stabilityPool.getETHBalance();
+    const ETHinSP_A = await stabilityPool.getCollBalance();
 
     const SPETHIncrease_A = ETHinSP_A.sub(ETHinSP_0);
 
@@ -852,7 +852,7 @@ contract("Gas compensation tests", async (accounts) => {
 
     // Check ETH in SP has increased by the remainder of B's coll
     const collRemainder_B = bobColl.sub(_0pt5percent_bobColl);
-    const ETHinSP_B = await stabilityPool.getETHBalance();
+    const ETHinSP_B = await stabilityPool.getCollBalance();
 
     const SPETHIncrease_B = ETHinSP_B.sub(ETHinSP_A);
 
@@ -1009,7 +1009,7 @@ contract("Gas compensation tests", async (accounts) => {
     await th.provideToSPAndClaim(contracts, dec(1, 23), { from: erin });
 
     const BoldinSP_0 = await stabilityPool.getTotalBoldDeposits();
-    const ETHinSP_0 = await stabilityPool.getETHBalance();
+    const ETHinSP_0 = await stabilityPool.getCollBalance();
 
     // --- Price drops to 199.999 ---
     await priceFeed.setPrice("199999000000000000000");
@@ -1141,7 +1141,7 @@ contract("Gas compensation tests", async (accounts) => {
     await th.provideToSPAndClaim(contracts, dec(1, 23), { from: erin });
 
     const BoldinSP_0 = await stabilityPool.getTotalBoldDeposits();
-    const ETHinSP_0 = await stabilityPool.getETHBalance();
+    const ETHinSP_0 = await stabilityPool.getCollBalance();
 
     await priceFeed.setPrice(dec(200, 18));
     const price_1 = await priceFeed.getPrice();

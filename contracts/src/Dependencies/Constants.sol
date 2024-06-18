@@ -12,16 +12,16 @@ uint256 constant _1pct = DECIMAL_PRECISION / 100;
 // Critical system collateral ratio. If the system's total collateral ratio (TCR) falls below the CCR, some borrowing operation restrictions are applied
 uint256 constant CCR = 150 * _1pct; // 150%
 
-// Amount of Bold to be locked in gas pool on opening troves
-uint256 constant BOLD_GAS_COMPENSATION = 200e18;
+// Amount of ETH to be locked in gas pool on opening troves
+uint256 constant ETH_GAS_COMPENSATION = 375e14; // 0.0375 ETH
 
 // Fraction of collateral awarded to liquidator
 uint256 constant COLL_GAS_COMPENSATION_DIVISOR = 200; // dividing by 200 yields 0.5%
 
 // Minimum amount of net Bold debt a trove must have
-uint256 constant MIN_NET_DEBT = 1800e18;
-uint256 constant MIN_DEBT = MIN_NET_DEBT + BOLD_GAS_COMPENSATION;
+uint256 constant MIN_DEBT = 2000e18;
 
+uint256 constant MIN_ANNUAL_INTEREST_RATE = 0; // TODO!
 uint256 constant MAX_ANNUAL_INTEREST_RATE = _100pct;
 
 uint256 constant REDEMPTION_FEE_FLOOR = _1pct / 2; // 0.5%
@@ -48,6 +48,6 @@ uint256 constant SP_YIELD_SPLIT = 72 * _1pct; // 72%
 // Dummy contract that lets legacy Hardhat tests query some of the constants
 contract Constants {
     uint256 public constant _CCR = CCR;
-    uint256 public constant _BOLD_GAS_COMPENSATION = BOLD_GAS_COMPENSATION;
-    uint256 public constant _MIN_NET_DEBT = MIN_NET_DEBT;
+    uint256 public constant _ETH_GAS_COMPENSATION = ETH_GAS_COMPENSATION;
+    uint256 public constant _MIN_DEBT = MIN_DEBT;
 }

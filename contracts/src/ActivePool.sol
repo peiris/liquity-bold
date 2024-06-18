@@ -9,24 +9,23 @@ import "./Interfaces/IActivePool.sol";
 import "./Interfaces/IBoldToken.sol";
 import "./Interfaces/IInterestRouter.sol";
 import "./Dependencies/Ownable.sol";
-import "./Dependencies/CheckContract.sol";
 import "./Interfaces/IDefaultPool.sol";
 
 // import "forge-std/console2.sol";
 
 /*
- * The Active Pool holds the ETH collateral and Bold debt (but not Bold tokens) for all active troves.
+ * The Active Pool holds the collateral and Bold debt (but not Bold tokens) for all active troves.
  *
- * When a trove is liquidated, it's ETH and Bold debt are transferred from the Active Pool, to either the
+ * When a trove is liquidated, it's Coll and Bold debt are transferred from the Active Pool, to either the
  * Stability Pool, the Default Pool, or both, depending on the liquidation conditions.
  *
  */
-contract ActivePool is Ownable, CheckContract, IActivePool {
+contract ActivePool is Ownable, IActivePool {
     using SafeERC20 for IERC20;
 
     string public constant NAME = "ActivePool";
 
-    IERC20 public immutable ETH;
+    IERC20 public immutable coll;
     address public borrowerOperationsAddress;
     address public troveManagerAddress;
     address public defaultPoolAddress;
@@ -36,7 +35,7 @@ contract ActivePool is Ownable, CheckContract, IActivePool {
     IInterestRouter public interestRouter;
     IBoldRewardsReceiver public stabilityPool;
 
-    uint256 internal ETHBalance; // deposited ether tracker
+    uint256 internal collBalance; // deposited ether tracker
 
     // Aggregate recorded debt tracker. Updated whenever a Trove's debt is touched AND whenever the aggregate pending interest is minted.
     // "D" in the spec.
@@ -51,6 +50,15 @@ contract ActivePool is Ownable, CheckContract, IActivePool {
     // Last time at which the aggregate recorded debt and weighted sum were updated
     uint256 public lastAggUpdateTime;
 
+    // Aggregate batch fees tracker
+    uint256 public aggBatchManagementFees;
+    /* Sum of individual recorded Trove debts weighted by their respective batch management fees
+     * Updated at individual batched Trove operations.
+     */
+    uint256 public aggWeightedBatchManagementFeeSum;
+    // Last time at which the aggregate batch fees and weighted sum were updated
+    uint256 public lastAggBatchManagementFeesUpdateTime;
+
     // --- Events ---
 
     event DefaultPoolAddressChanged(address _newDefaultPoolAddress);
@@ -59,11 +67,10 @@ contract ActivePool is Ownable, CheckContract, IActivePool {
     event BorrowerOperationsAddressChanged(address _newBorrowerOperationsAddress);
     event TroveManagerAddressChanged(address _newTroveManagerAddress);
     event ActivePoolBoldDebtUpdated(uint256 _recordedDebtSum);
-    event ActivePoolETHBalanceUpdated(uint256 _ETHBalance);
+    event ActivePoolCollBalanceUpdated(uint256 _collBalance);
 
-    constructor(address _ETHAddress) {
-        checkContract(_ETHAddress);
-        ETH = IERC20(_ETHAddress);
+    constructor(address _collAddress) {
+        coll = IERC20(_collAddress);
     }
 
     // --- Contract setters ---
@@ -76,13 +83,6 @@ contract ActivePool is Ownable, CheckContract, IActivePool {
         address _boldTokenAddress,
         address _interestRouterAddress
     ) external onlyOwner {
-        checkContract(_borrowerOperationsAddress);
-        checkContract(_troveManagerAddress);
-        checkContract(_stabilityPoolAddress);
-        checkContract(_defaultPoolAddress);
-        checkContract(_boldTokenAddress);
-        checkContract(_interestRouterAddress);
-
         borrowerOperationsAddress = _borrowerOperationsAddress;
         troveManagerAddress = _troveManagerAddress;
         defaultPoolAddress = _defaultPoolAddress;
@@ -96,7 +96,7 @@ contract ActivePool is Ownable, CheckContract, IActivePool {
         emit DefaultPoolAddressChanged(_defaultPoolAddress);
 
         // Allow funds movements between Liquity contracts
-        ETH.approve(_defaultPoolAddress, type(uint256).max);
+        coll.approve(_defaultPoolAddress, type(uint256).max);
 
         _renounceOwnership();
     }
@@ -104,16 +104,21 @@ contract ActivePool is Ownable, CheckContract, IActivePool {
     // --- Getters for public variables. Required by IPool interface ---
 
     /*
-    * Returns the ETH state variable.
+    * Returns the Coll state variable.
     *
-    *Not necessarily equal to the the contract's raw ETH balance - ether can be forcibly sent to contracts.
+    *Not necessarily equal to the the contract's raw Coll balance - ether can be forcibly sent to contracts.
     */
-    function getETHBalance() external view override returns (uint256) {
-        return ETHBalance;
+    function getCollBalance() external view override returns (uint256) {
+        return collBalance;
     }
 
     function calcPendingAggInterest() public view returns (uint256) {
         return aggWeightedDebtSum * (block.timestamp - lastAggUpdateTime) / ONE_YEAR / DECIMAL_PRECISION;
+    }
+
+    function calcPendingAggBatchManagementFee() public view returns (uint256) {
+        return aggWeightedBatchManagementFeeSum * (block.timestamp - lastAggBatchManagementFeesUpdateTime) / ONE_YEAR
+            / DECIMAL_PRECISION;
     }
 
     function getNewApproxAvgInterestRateFromTroveChange(TroveChange calldata _troveChange)
@@ -141,55 +146,55 @@ contract ActivePool is Ownable, CheckContract, IActivePool {
 
     // Returns sum of agg.recorded debt plus agg. pending interest. Excludes pending redist. gains.
     function getBoldDebt() external view returns (uint256) {
-        return aggRecordedDebt + calcPendingAggInterest();
+        return aggRecordedDebt + calcPendingAggInterest() + aggBatchManagementFees + calcPendingAggBatchManagementFee();
     }
 
     // --- Pool functionality ---
 
-    function sendETH(address _account, uint256 _amount) external override {
+    function sendColl(address _account, uint256 _amount) external override {
         _requireCallerIsBOorTroveMorSP();
 
-        _accountForSendETH(_account, _amount);
+        _accountForSendColl(_account, _amount);
 
-        ETH.safeTransfer(_account, _amount);
+        coll.safeTransfer(_account, _amount);
     }
 
-    function sendETHToDefaultPool(uint256 _amount) external override {
+    function sendCollToDefaultPool(uint256 _amount) external override {
         _requireCallerIsTroveManager();
 
         address defaultPoolAddressCached = defaultPoolAddress;
-        _accountForSendETH(defaultPoolAddressCached, _amount);
+        _accountForSendColl(defaultPoolAddressCached, _amount);
 
-        IDefaultPool(defaultPoolAddressCached).receiveETH(_amount);
+        IDefaultPool(defaultPoolAddressCached).receiveColl(_amount);
     }
 
-    function _accountForSendETH(address _account, uint256 _amount) internal {
-        uint256 newETHBalance = ETHBalance - _amount;
-        ETHBalance = newETHBalance;
-        emit ActivePoolETHBalanceUpdated(newETHBalance);
+    function _accountForSendColl(address _account, uint256 _amount) internal {
+        uint256 newCollBalance = collBalance - _amount;
+        collBalance = newCollBalance;
+        emit ActivePoolCollBalanceUpdated(newCollBalance);
         emit EtherSent(_account, _amount);
     }
 
-    function receiveETH(uint256 _amount) external {
+    function receiveColl(uint256 _amount) external {
         _requireCallerIsBorrowerOperationsOrDefaultPool();
 
-        _accountForReceivedETH(_amount);
+        _accountForReceivedColl(_amount);
 
-        // Pull ETH tokens from sender
-        ETH.safeTransferFrom(msg.sender, address(this), _amount);
+        // Pull Coll tokens from sender
+        coll.safeTransferFrom(msg.sender, address(this), _amount);
     }
 
-    function accountForReceivedETH(uint256 _amount) public {
+    function accountForReceivedColl(uint256 _amount) public {
         _requireCallerIsBorrowerOperationsOrDefaultPool();
 
-        _accountForReceivedETH(_amount);
+        _accountForReceivedColl(_amount);
     }
 
-    function _accountForReceivedETH(uint256 _amount) internal {
-        uint256 newETHBalance = ETHBalance + _amount;
-        ETHBalance = newETHBalance;
+    function _accountForReceivedColl(uint256 _amount) internal {
+        uint256 newCollBalance = collBalance + _amount;
+        collBalance = newCollBalance;
 
-        emit ActivePoolETHBalanceUpdated(newETHBalance);
+        emit ActivePoolCollBalanceUpdated(newCollBalance);
     }
 
     // --- Aggregate interest operations ---
@@ -201,12 +206,14 @@ contract ActivePool is Ownable, CheckContract, IActivePool {
     // It does *not* include the Trove's individual accrued interest - this gets accounted for in the aggregate accrued interest.
     // The net Trove debt change could be positive or negative in a repayment (depending on whether its redistribution gain or repayment amount is larger),
     // so this function accepts both the increase and the decrease to avoid using (and converting to/from) signed ints.
-    function mintAggInterestAndAccountForTroveChange(TroveChange calldata _troveChange) external {
+    function mintAggInterestAndAccountForTroveChange(TroveChange calldata _troveChange, address _batchAddress)
+        external
+    {
         _requireCallerIsBOorTroveM();
 
         // Do the arithmetic in 2 steps here to avoid overflow from the decrease
         uint256 newAggRecordedDebt = aggRecordedDebt; // 1 SLOAD
-        newAggRecordedDebt += _mintAggInterest(_troveChange.upfrontFee); // adds minted agg. interest + upfront fee
+        newAggRecordedDebt += _mintAggInterest(boldToken, _troveChange.upfrontFee); // adds minted agg. interest + upfront fee
         newAggRecordedDebt += _troveChange.appliedRedistBoldDebtGain;
         newAggRecordedDebt += _troveChange.debtIncrease;
         newAggRecordedDebt -= _troveChange.debtDecrease;
@@ -220,14 +227,19 @@ contract ActivePool is Ownable, CheckContract, IActivePool {
         newAggWeightedDebtSum += _troveChange.newWeightedRecordedDebt;
         newAggWeightedDebtSum -= _troveChange.oldWeightedRecordedDebt;
         aggWeightedDebtSum = newAggWeightedDebtSum; // 1 SSTORE
+
+        // Batch management fees
+        if (_batchAddress != address(0)) {
+            _mintBatchManagementFeeAndAccountForChange(boldToken, _troveChange, _batchAddress);
+        }
     }
 
     function mintAggInterest() external override {
         _requireCallerIsSP();
-        aggRecordedDebt += _mintAggInterest(0);
+        aggRecordedDebt += _mintAggInterest(boldToken, 0);
     }
 
-    function _mintAggInterest(uint256 _upfrontFee) internal returns (uint256 mintedAmount) {
+    function _mintAggInterest(IBoldToken _boldToken, uint256 _upfrontFee) internal returns (uint256 mintedAmount) {
         mintedAmount = calcPendingAggInterest() + _upfrontFee;
 
         // Mint part of the BOLD interest to the SP.
@@ -236,13 +248,47 @@ contract ActivePool is Ownable, CheckContract, IActivePool {
             uint256 spYield = SP_YIELD_SPLIT * mintedAmount / 1e18;
             uint256 remainderToLPs = mintedAmount - spYield;
 
-            boldToken.mint(address(interestRouter), remainderToLPs);
-            boldToken.mint(address(stabilityPool), spYield);
+            _boldToken.mint(address(interestRouter), remainderToLPs);
+            _boldToken.mint(address(stabilityPool), spYield);
 
             stabilityPool.triggerBoldRewards(spYield);
         }
 
         lastAggUpdateTime = block.timestamp;
+    }
+
+    function mintBatchManagementFeeAndAccountForChange(TroveChange calldata _troveChange, address _batchAddress)
+        external
+        override
+    {
+        _requireCallerIsBOorTroveM();
+        _mintBatchManagementFeeAndAccountForChange(boldToken, _troveChange, _batchAddress);
+    }
+
+    function _mintBatchManagementFeeAndAccountForChange(
+        IBoldToken _boldToken,
+        TroveChange memory _troveChange,
+        address _batchAddress
+    ) internal {
+        aggRecordedDebt += _troveChange.batchAccruedManagementFee;
+
+        // Do the arithmetic in 2 steps here to avoid overflow from the decrease
+        uint256 newAggBatchManagementFees = aggBatchManagementFees; // 1 SLOAD
+        newAggBatchManagementFees += calcPendingAggBatchManagementFee();
+        newAggBatchManagementFees -= _troveChange.batchAccruedManagementFee;
+        aggBatchManagementFees = newAggBatchManagementFees; // 1 SSTORE
+
+        // Do the arithmetic in 2 steps here to avoid overflow from the decrease
+        uint256 newAggWeightedBatchManagementFeeSum = aggWeightedBatchManagementFeeSum; // 1 SLOAD
+        newAggWeightedBatchManagementFeeSum += _troveChange.newWeightedRecordedBatchManagementFee;
+        newAggWeightedBatchManagementFeeSum -= _troveChange.oldWeightedRecordedBatchManagementFee;
+        aggWeightedBatchManagementFeeSum = newAggWeightedBatchManagementFeeSum; // 1 SSTORE
+
+        // mint fee to batch address
+        if (_troveChange.batchAccruedManagementFee > 0) {
+            _boldToken.mint(_batchAddress, _troveChange.batchAccruedManagementFee);
+        }
+        lastAggBatchManagementFeesUpdateTime = block.timestamp;
     }
 
     // --- 'require' functions ---

@@ -2450,7 +2450,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       th.assertIsApproximatelyEqual(await stabilityPool.P(), dec(1, 16), 10000); // Scale changes and P changes to 1e(12-5+9) = 1e16
       assert.equal(await stabilityPool.currentScale(), "2");
 
-      const alice_ETHGainAt2ndScaleChange = (await stabilityPool.getDepositorETHGain(alice)).toString();
+      const alice_ETHGainAt2ndScaleChange = (await stabilityPool.getDepositorCollGain(alice)).toString();
 
       // E deposits 9999.9 Bold
       await boldToken.transfer(erin, dec(99999, 17), { from: whale });
@@ -2462,7 +2462,7 @@ contract("StabilityPool - Withdrawal of stability deposit - Reward calculations"
       th.assertIsApproximatelyEqual(await stabilityPool.P(), dec(1, 11), 1); // P decreases to 1e(16-5) = 1e11
       assert.equal(await stabilityPool.currentScale(), "2");
 
-      const alice_ETHGainAfterFurtherLiquidation = (await stabilityPool.getDepositorETHGain(alice)).toString();
+      const alice_ETHGainAfterFurtherLiquidation = (await stabilityPool.getDepositorCollGain(alice)).toString();
 
       const alice_scaleSnapshot = (await stabilityPool.depositSnapshots(alice))[2].toString();
 

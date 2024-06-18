@@ -22,7 +22,7 @@ interface IActivePool {
         address _interestRouterAddress
     ) external;
 
-    function getETHBalance() external view returns (uint256);
+    function getCollBalance() external view returns (uint256);
     function getBoldDebt() external view returns (uint256);
     function lastAggUpdateTime() external view returns (uint256);
     function aggRecordedDebt() external view returns (uint256);
@@ -34,10 +34,13 @@ interface IActivePool {
         returns (uint256);
 
     function mintAggInterest() external;
-    function mintAggInterestAndAccountForTroveChange(TroveChange calldata _troveChange) external;
+    function mintAggInterestAndAccountForTroveChange(TroveChange calldata _troveChange, address _batchManager)
+        external;
+    function mintBatchManagementFeeAndAccountForChange(TroveChange calldata _troveChange, address _batchAddress)
+        external;
 
-    function sendETH(address _account, uint256 _amount) external;
-    function sendETHToDefaultPool(uint256 _amount) external;
-    function receiveETH(uint256 _amount) external;
-    function accountForReceivedETH(uint256 _amount) external;
+    function sendColl(address _account, uint256 _amount) external;
+    function sendCollToDefaultPool(uint256 _amount) external;
+    function receiveColl(uint256 _amount) external;
+    function accountForReceivedColl(uint256 _amount) external;
 }
