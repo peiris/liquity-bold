@@ -29,6 +29,8 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
     // A doubly linked list of Troves, sorted by their sorted by their collateral ratios
     ISortedTroves public sortedTroves;
     address public collateralRegistryAddress;
+    // Wrapped ETH for liquidation reserve (gas compensation)
+    IERC20 public immutable WETH;
 
     // --- Data structures ---
 
@@ -80,22 +82,22 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
     uint256 public totalCollateralSnapshot;
 
     /*
-    * L_ETH and L_boldDebt track the sums of accumulated liquidation rewards per unit staked. During its lifetime, each stake earns:
+    * L_coll and L_boldDebt track the sums of accumulated liquidation rewards per unit staked. During its lifetime, each stake earns:
     *
-    * An ETH gain of ( stake * [L_ETH - L_ETH(0)] )
+    * An Coll gain of ( stake * [L_coll - L_coll(0)] )
     * A boldDebt increase  of ( stake * [L_boldDebt - L_boldDebt(0)] )
     *
-    * Where L_ETH(0) and L_boldDebt(0) are snapshots of L_ETH and L_boldDebt for the active Trove taken at the instant the stake was made
+    * Where L_coll(0) and L_boldDebt(0) are snapshots of L_coll and L_boldDebt for the active Trove taken at the instant the stake was made
     */
-    uint256 public L_ETH;
+    uint256 public L_coll;
     uint256 public L_boldDebt;
 
     // Map active troves to their RewardSnapshot
     mapping(uint256 => RewardSnapshot) public rewardSnapshots;
 
-    // Object containing the ETH and Bold snapshots for a given active trove
+    // Object containing the Coll and Bold snapshots for a given active trove
     struct RewardSnapshot {
-        uint256 ETH;
+        uint256 coll;
         uint256 boldDebt;
     }
 
@@ -105,7 +107,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
     address[] public batchIds;
 
     // Error trackers for the trove redistribution calculation
-    uint256 public lastETHError_Redistribution;
+    uint256 public lastCollError_Redistribution;
     uint256 public lastBoldDebtError_Redistribution;
 
     /*
@@ -140,7 +142,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
     struct LiquidationTotals {
         TroveChange troveChange;
         uint256 totalCollGasCompensation;
-        uint256 totalBoldGasCompensation;
+        uint256 totalETHGasCompensation;
         uint256 totalDebtToOffset;
         uint256 totalCollToSendToSP;
         uint256 totalDebtToRedistribute;
@@ -161,15 +163,15 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
 
     struct RedemptionTotals {
         TroveChange troveChange;
-        uint256 ETHFee;
+        uint256 collFee;
     }
 
     struct SingleRedemptionValues {
         uint256 troveId;
         address batchAddress;
-        uint256 BoldLot;
-        uint256 ETHLot;
-        uint256 ETHFee;
+        uint256 boldLot;
+        uint256 collLot;
+        uint256 collFee;
         uint256 appliedRedistBoldDebtGain;
         uint256 oldWeightedRecordedDebt;
         uint256 newWeightedRecordedDebt;
@@ -191,7 +193,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
     event SortedTrovesAddressChanged(address _sortedTrovesAddress);
     event CollateralRegistryAddressChanged(address _collateralRegistryAddress);
 
-    constructor(uint256 _mcr, uint256 _liquidationPenaltySP, uint256 _liquidationPenaltyRedistribution)
+    constructor(uint256 _mcr, uint256 _liquidationPenaltySP, uint256 _liquidationPenaltyRedistribution, IERC20 _weth)
         ERC721(NAME, SYMBOL)
     {
         require(_mcr > 1e18 && _mcr < 2e18, "Invalid MCR");
@@ -202,6 +204,8 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         MCR = _mcr;
         LIQUIDATION_PENALTY_SP = _liquidationPenaltySP;
         LIQUIDATION_PENALTY_REDISTRIBUTION = _liquidationPenaltyRedistribution;
+
+        WETH = _weth;
     }
 
     // --- Dependency setter ---
@@ -285,7 +289,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         if (isTroveInBatch) _getLatestBatchData(batchAddress, singleLiquidation.batch);
 
         _movePendingTroveRewardsToActivePool(
-            _defaultPool, singleLiquidation.trove.redistBoldDebtGain, singleLiquidation.trove.redistETHGain
+            _defaultPool, singleLiquidation.trove.redistBoldDebtGain, singleLiquidation.trove.redistCollGain
         );
 
         singleLiquidation.collGasCompensation = _getCollGasCompensation(singleLiquidation.trove.entireColl);
@@ -304,7 +308,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         TroveChange memory troveChange;
         troveChange.collDecrease = singleLiquidation.trove.entireColl;
         troveChange.debtDecrease = singleLiquidation.trove.entireDebt;
-        troveChange.appliedRedistETHGain = singleLiquidation.trove.redistETHGain;
+        troveChange.appliedRedistCollGain = singleLiquidation.trove.redistCollGain;
         troveChange.appliedRedistBoldDebtGain = singleLiquidation.trove.redistBoldDebtGain;
         _closeTrove(
             _troveId,
@@ -349,7 +353,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
             singleLiquidation.trove.redistBoldDebtGain,
             0, // _debtIncreaseFromUpfrontFee
             -int256(singleLiquidation.trove.entireDebt),
-            singleLiquidation.trove.redistETHGain,
+            singleLiquidation.trove.redistCollGain,
             -int256(singleLiquidation.trove.entireColl)
         );
     }
@@ -447,7 +451,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
 
         activePool.mintAggInterestAndAccountForTroveChange(totals.troveChange, address(0));
 
-        // Move liquidated ETH and Bold to the appropriate pools
+        // Move liquidated Coll and Bold to the appropriate pools
         if (totals.totalDebtToOffset > 0 || totals.totalCollToSendToSP > 0) {
             stabilityPoolCached.offset(totals.totalDebtToOffset, totals.totalCollToSendToSP);
         }
@@ -456,7 +460,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
             activePoolCached, defaultPoolCached, totals.totalDebtToRedistribute, totals.totalCollToRedistribute
         );
         if (totals.totalCollSurplus > 0) {
-            activePoolCached.sendETH(address(collSurplusPool), totals.totalCollSurplus);
+            activePoolCached.sendColl(address(collSurplusPool), totals.totalCollSurplus);
         }
 
         // Update system snapshots
@@ -465,19 +469,19 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         emit Liquidation(
             totals.totalDebtToOffset,
             totals.totalDebtToRedistribute,
-            totals.totalBoldGasCompensation,
+            totals.totalETHGasCompensation,
             totals.totalCollGasCompensation,
             totals.totalCollToSendToSP,
             totals.totalCollToRedistribute,
             totals.totalCollSurplus,
-            L_ETH,
+            L_coll,
             L_boldDebt,
             price
         );
 
         // Send gas compensation to caller
         _sendGasCompensation(
-            activePoolCached, msg.sender, totals.totalBoldGasCompensation, totals.totalCollGasCompensation
+            activePoolCached, msg.sender, totals.totalETHGasCompensation, totals.totalCollGasCompensation
         );
     }
 
@@ -525,7 +529,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
     {
         // Tally all the values with their respective running totals
         totals.totalCollGasCompensation += singleLiquidation.collGasCompensation;
-        totals.totalBoldGasCompensation += BOLD_GAS_COMPENSATION;
+        totals.totalETHGasCompensation += ETH_GAS_COMPENSATION;
         totals.troveChange.debtDecrease += singleLiquidation.trove.entireDebt;
         totals.troveChange.collDecrease += singleLiquidation.trove.entireColl;
         totals.troveChange.appliedRedistBoldDebtGain += singleLiquidation.trove.redistBoldDebtGain;
@@ -538,24 +542,24 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         totals.totalCollSurplus += singleLiquidation.collSurplus;
     }
 
-    function _sendGasCompensation(IActivePool _activePool, address _liquidator, uint256 _bold, uint256 _ETH) internal {
-        if (_bold > 0) {
-            boldToken.returnFromPool(gasPoolAddress, _liquidator, _bold);
+    function _sendGasCompensation(IActivePool _activePool, address _liquidator, uint256 _eth, uint256 _coll) internal {
+        if (_eth > 0) {
+            WETH.transferFrom(gasPoolAddress, _liquidator, _eth);
         }
 
-        if (_ETH > 0) {
-            _activePool.sendETH(_liquidator, _ETH);
+        if (_coll > 0) {
+            _activePool.sendColl(_liquidator, _coll);
         }
     }
 
     // Move a Trove's pending debt and collateral rewards from distributions, from the Default Pool to the Active Pool
-    function _movePendingTroveRewardsToActivePool(IDefaultPool _defaultPool, uint256 _bold, uint256 _ETH) internal {
+    function _movePendingTroveRewardsToActivePool(IDefaultPool _defaultPool, uint256 _bold, uint256 _coll) internal {
         if (_bold > 0) {
             _defaultPool.decreaseBoldDebt(_bold);
         }
 
-        if (_ETH > 0) {
-            _defaultPool.sendETHToActivePool(_ETH);
+        if (_coll > 0) {
+            _defaultPool.sendCollToActivePool(_coll);
         }
     }
 
@@ -571,19 +575,19 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
     ) internal {
         _getLatestTroveData(singleRedemption.troveId, singleRedemption.trove);
 
-        // Determine the remaining amount (lot) to be redeemed, capped by the entire debt of the Trove minus the liquidation reserve
-        singleRedemption.BoldLot = LiquityMath._min(_maxBoldamount, singleRedemption.trove.entireDebt - BOLD_GAS_COMPENSATION);
+        // Determine the remaining amount (lot) to be redeemed, capped by the entire debt of the Trove
+        singleRedemption.boldLot = LiquityMath._min(_maxBoldamount, singleRedemption.trove.entireDebt);
 
-        // Get the amount of ETH equal in USD value to the BoldLot redeemed
-        uint256 correspondingETH = singleRedemption.BoldLot * DECIMAL_PRECISION / _price;
-        // Calculate the ETHFee separately (for events)
-        singleRedemption.ETHFee = correspondingETH * _redemptionRate / DECIMAL_PRECISION;
-        // Get the final ETHLot to send to redeemer, leaving the fee in the Trove
-        singleRedemption.ETHLot = correspondingETH - singleRedemption.ETHFee;
+        // Get the amount of Coll equal in USD value to the boldLot redeemed
+        uint256 correspondingColl = singleRedemption.boldLot * DECIMAL_PRECISION / _price;
+        // Calculate the collFee separately (for events)
+        singleRedemption.collFee = correspondingColl * _redemptionRate / DECIMAL_PRECISION;
+        // Get the final collLot to send to redeemer, leaving the fee in the Trove
+        singleRedemption.collLot = correspondingColl - singleRedemption.collFee;
 
-        // Decrease the debt and collateral of the current Trove according to the Bold lot and corresponding ETH to send
-        uint256 newDebt = singleRedemption.trove.entireDebt - singleRedemption.BoldLot;
-        uint256 newColl = singleRedemption.trove.entireColl - singleRedemption.ETHLot;
+        // Decrease the debt and collateral of the current Trove according to the Bold lot and corresponding Coll to send
+        uint256 newDebt = singleRedemption.trove.entireDebt - singleRedemption.boldLot;
+        uint256 newColl = singleRedemption.trove.entireColl - singleRedemption.collLot;
 
         singleRedemption.appliedRedistBoldDebtGain = singleRedemption.trove.redistBoldDebtGain;
 
@@ -601,16 +605,16 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
 
         if (isTroveInBatch) {
             _getLatestBatchData(singleRedemption.batchAddress, singleRedemption.batch);
-            singleRedemption.oldWeightedRecordedDebt = singleRedemption.batch.weightedRecordedDebt + singleRedemption.BoldLot * singleRedemption.batch.annualInterestRate;
+            singleRedemption.oldWeightedRecordedDebt = singleRedemption.batch.weightedRecordedDebt + singleRedemption.boldLot * singleRedemption.batch.annualInterestRate;
             singleRedemption.newWeightedRecordedDebt = singleRedemption.batch.entireDebt * singleRedemption.batch.annualInterestRate;
 
             TroveChange memory troveChange;
-            troveChange.debtDecrease = singleRedemption.BoldLot;
-            troveChange.collDecrease = singleRedemption.ETHLot;
+            troveChange.debtDecrease = singleRedemption.boldLot;
+            troveChange.collDecrease = singleRedemption.collLot;
             troveChange.appliedRedistBoldDebtGain = singleRedemption.trove.redistBoldDebtGain;
-            troveChange.appliedRedistETHGain = singleRedemption.trove.redistETHGain;
+            troveChange.appliedRedistCollGain = singleRedemption.trove.redistCollGain;
             // batchAccruedManagementFee is handled in the outer function
-            troveChange.oldWeightedRecordedBatchManagementFee = singleRedemption.batch.weightedRecordedBatchManagementFee + singleRedemption.BoldLot * singleRedemption.batch.annualManagementFee;
+            troveChange.oldWeightedRecordedBatchManagementFee = singleRedemption.batch.weightedRecordedBatchManagementFee + singleRedemption.boldLot * singleRedemption.batch.annualManagementFee;
             troveChange.newWeightedRecordedBatchManagementFee = singleRedemption.batch.entireDebt * singleRedemption.batch.annualManagementFee;
 
             // TODO: optimize: as redemptions are consecutive inside a batch, we can do this in the outer loop, only once per batch
@@ -631,10 +635,10 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         // TODO: Gas optimize? We update totalStakes N times for a sequence of N Troves(!).
         singleRedemption.newStake = _updateStakeAndTotalStakes(singleRedemption.troveId, newColl);
         // TODO: Gas optimize? We move pending rewards N times for a sequence of N Troves(!).
-        _movePendingTroveRewardsToActivePool(_contractsCache.defaultPool, singleRedemption.trove.redistBoldDebtGain, singleRedemption.trove.redistETHGain);
+        _movePendingTroveRewardsToActivePool(_contractsCache.defaultPool, singleRedemption.trove.redistBoldDebtGain, singleRedemption.trove.redistCollGain);
         _updateTroveRewardSnapshots(singleRedemption.troveId);
 
-        emit TroveUpdated(singleRedemption.troveId, newDebt, newColl, singleRedemption.newStake, singleRedemption.trove.annualInterestRate, L_ETH, L_boldDebt);
+        emit TroveUpdated(singleRedemption.troveId, newDebt, newColl, singleRedemption.newStake, singleRedemption.trove.annualInterestRate, L_coll, L_boldDebt);
 
         emit TroveOperation(
             singleRedemption.troveId,
@@ -642,12 +646,12 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
             singleRedemption.trove.annualInterestRate,
             singleRedemption.trove.redistBoldDebtGain,
             0, // _debtIncreaseFromUpfrontFee
-            -int256(singleRedemption.BoldLot),
-            singleRedemption.trove.redistETHGain,
-            -int256(singleRedemption.ETHLot)
+            -int256(singleRedemption.boldLot),
+            singleRedemption.trove.redistCollGain,
+            -int256(singleRedemption.collLot)
         );
 
-        emit RedemptionFeePaidToTrove(singleRedemption.troveId, singleRedemption.ETHFee);
+        emit RedemptionFeePaidToTrove(singleRedemption.troveId, singleRedemption.collFee);
     }
 
     /* Send _boldamount Bold to the system and redeem the corresponding amount of collateral from as many Troves as are needed to fill the redemption
@@ -726,32 +730,32 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
 
             _redeemCollateralFromTrove(contractsCache, singleRedemption, remainingBold, _price, _redemptionRate);
 
-            totals.troveChange.collDecrease += singleRedemption.ETHLot;
-            totals.troveChange.debtDecrease += singleRedemption.BoldLot;
+            totals.troveChange.collDecrease += singleRedemption.collLot;
+            totals.troveChange.debtDecrease += singleRedemption.boldLot;
             totals.troveChange.appliedRedistBoldDebtGain += singleRedemption.appliedRedistBoldDebtGain;
             // For recorded and weighted recorded debt totals, we need to capture the increases and decreases,
             // since the net debt change for a given Trove could be positive or negative: redemptions decrease a Trove's recorded
             // (and weighted recorded) debt, but the accrued interest increases it.
             totals.troveChange.newWeightedRecordedDebt += singleRedemption.newWeightedRecordedDebt;
             totals.troveChange.oldWeightedRecordedDebt += singleRedemption.oldWeightedRecordedDebt;
-            totals.ETHFee += singleRedemption.ETHFee;
+            totals.collFee += singleRedemption.collFee;
 
-            remainingBold -= singleRedemption.BoldLot;
+            remainingBold -= singleRedemption.boldLot;
             singleRedemption.troveId = nextUserToCheck;
         }
 
         // We are removing this condition to prevent blocking redemptions
-        //require(totals.totalETHDrawn > 0, "TroveManager: Unable to redeem any amount");
+        //require(totals.totalCollDrawn > 0, "TroveManager: Unable to redeem any amount");
 
         emit Redemption(
-            _boldamount, totals.troveChange.debtDecrease, totals.troveChange.collDecrease, totals.ETHFee, _price
+            _boldamount, totals.troveChange.debtDecrease, totals.troveChange.collDecrease, totals.collFee, _price
         );
 
         // TODO: batch fee
         activePool.mintAggInterestAndAccountForTroveChange(totals.troveChange, address(0));
 
-        // Send the redeemed ETH to sender
-        contractsCache.activePool.sendETH(_sender, totals.troveChange.collDecrease);
+        // Send the redeemed Coll to sender
+        contractsCache.activePool.sendColl(_sender, totals.troveChange.collDecrease);
         // We’ll burn all the Bold together out in the CollateralRegistry, to save gas
 
         return totals.troveChange.debtDecrease;
@@ -767,15 +771,15 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
     }
 
     function _updateTroveRewardSnapshots(uint256 _troveId) internal {
-        rewardSnapshots[_troveId].ETH = L_ETH;
+        rewardSnapshots[_troveId].coll = L_coll;
         rewardSnapshots[_troveId].boldDebt = L_boldDebt;
     }
 
-    // Get the borrower's pending accumulated ETH reward, earned by their stake
-    function getPendingETHReward(uint256 _troveId) external view override returns (uint256 redistETHGain) {
+    // Get the borrower's pending accumulated Coll reward, earned by their stake
+    function getPendingCollReward(uint256 _troveId) external view override returns (uint256 redistCollGain) {
         LatestTroveData memory trove;
         _getLatestTroveData(_troveId, trove);
-        return trove.redistETHGain;
+        return trove.redistCollGain;
     }
 
     // Get the borrower's pending accumulated Bold reward, earned by their stake
@@ -793,7 +797,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         */
         if (!checkTroveIsOpen(_troveId)) return false;
 
-        return (rewardSnapshots[_troveId].ETH < L_ETH);
+        return (rewardSnapshots[_troveId].coll < L_coll);
     }
 
     // Return the Troves entire debt and coll, including redistribution gains from redistributions.
@@ -809,7 +813,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
 
         uint256 stake = Troves[_troveId].stake;
         trove.redistBoldDebtGain = stake * (L_boldDebt - rewardSnapshots[_troveId].boldDebt) / DECIMAL_PRECISION;
-        trove.redistETHGain = stake * (L_ETH - rewardSnapshots[_troveId].ETH) / DECIMAL_PRECISION;
+        trove.redistCollGain = stake * (L_coll - rewardSnapshots[_troveId].coll) / DECIMAL_PRECISION;
 
         trove.recordedDebt = Troves[_troveId].debt;
         trove.annualInterestRate = Troves[_troveId].annualInterestRate;
@@ -818,7 +822,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
             _calcInterest(trove.weightedRecordedDebt, block.timestamp - Troves[_troveId].lastDebtUpdateTime);
 
         trove.entireDebt = trove.recordedDebt + trove.redistBoldDebtGain + trove.accruedInterest;
-        trove.entireColl = Troves[_troveId].coll + trove.redistETHGain;
+        trove.entireColl = Troves[_troveId].coll + trove.redistCollGain;
         trove.lastInterestRateAdjTime = Troves[_troveId].lastInterestRateAdjTime;
     }
 
@@ -837,7 +841,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         //uint256 batchRedistBoldDebtGain = stake * (L_boldDebt - rewardBatchSnapshots[_batchAddress].boldDebt) / DECIMAL_PRECISION;
         _latestTroveData.redistBoldDebtGain =
             stake * (L_boldDebt - rewardSnapshots[_troveId].boldDebt) / DECIMAL_PRECISION;
-        _latestTroveData.redistETHGain = stake * (L_ETH - rewardSnapshots[_troveId].ETH) / DECIMAL_PRECISION;
+        _latestTroveData.redistCollGain = stake * (L_coll - rewardSnapshots[_troveId].coll) / DECIMAL_PRECISION;
 
         _latestTroveData.recordedDebt = _latestBatchData.recordedDebt * batchDebtShares / totalDebtShares;
         _latestTroveData.annualInterestRate = _latestBatchData.annualInterestRate;
@@ -849,7 +853,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         // We can’t do pro-rata batch entireDebt, because redist gains are proportional to coll, not to debt
         _latestTroveData.entireDebt = _latestTroveData.recordedDebt + _latestTroveData.redistBoldDebtGain
             + _latestTroveData.accruedInterest + _latestTroveData.accruedBatchManagementFee;
-        _latestTroveData.entireColl = trove.coll + _latestTroveData.redistETHGain;
+        _latestTroveData.entireColl = trove.coll + _latestTroveData.redistCollGain;
         _latestTroveData.lastInterestRateAdjTime = LiquityMath._max(_latestBatchData.lastInterestRateAdjTime, trove.lastInterestRateAdjTime);
     }
 
@@ -864,7 +868,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
             uint256 entireDebt,
             uint256 entireColl,
             uint256 pendingBoldDebtReward,
-            uint256 pendingETHReward,
+            uint256 pendingCollReward,
             uint256 accruedTroveInterest
         )
     {
@@ -872,7 +876,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         _getLatestTroveData(_troveId, trove);
 
         return
-            (trove.entireDebt, trove.entireColl, trove.redistBoldDebtGain, trove.redistETHGain, trove.accruedInterest);
+            (trove.entireDebt, trove.entireColl, trove.redistBoldDebtGain, trove.redistCollGain, trove.accruedInterest);
     }
 
     function getTroveEntireDebt(uint256 _troveId) public view returns (uint256) {
@@ -961,7 +965,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
 
         /*
         * Add distributed coll and debt rewards-per-unit-staked to the running totals. Division uses a "feedback"
-        * error correction, to keep the cumulative error low in the running totals L_ETH and L_boldDebt:
+        * error correction, to keep the cumulative error low in the running totals L_coll and L_boldDebt:
         *
         * 1) Form numerators which compensate for the floor division errors that occurred the last time this
         * function was called.
@@ -970,22 +974,22 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         * 4) Store these errors for use in the next correction when this function is called.
         * 5) Note: static analysis tools complain about this "division before multiplication", however, it is intended.
         */
-        uint256 ETHNumerator = _collToRedistribute * DECIMAL_PRECISION + lastETHError_Redistribution;
+        uint256 collNumerator = _collToRedistribute * DECIMAL_PRECISION + lastCollError_Redistribution;
         uint256 boldDebtNumerator = _debtToRedistribute * DECIMAL_PRECISION + lastBoldDebtError_Redistribution;
 
         // Get the per-unit-staked terms
-        uint256 ETHRewardPerUnitStaked = ETHNumerator / totalStakes;
+        uint256 collRewardPerUnitStaked = collNumerator / totalStakes;
         uint256 boldDebtRewardPerUnitStaked = boldDebtNumerator / totalStakes;
 
-        lastETHError_Redistribution = ETHNumerator - ETHRewardPerUnitStaked * totalStakes;
+        lastCollError_Redistribution = collNumerator - collRewardPerUnitStaked * totalStakes;
         lastBoldDebtError_Redistribution = boldDebtNumerator - boldDebtRewardPerUnitStaked * totalStakes;
 
         // Add per-unit-staked terms to the running totals
-        L_ETH = L_ETH + ETHRewardPerUnitStaked;
+        L_coll = L_coll + collRewardPerUnitStaked;
         L_boldDebt = L_boldDebt + boldDebtRewardPerUnitStaked;
 
         _defaultPool.increaseBoldDebt(_debtToRedistribute);
-        _activePool.sendETHToDefaultPool(_collToRedistribute);
+        _activePool.sendCollToDefaultPool(_collToRedistribute);
     }
 
     function onCloseTrove(
@@ -1005,7 +1009,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
             Status.closedByOwner
         );
         _movePendingTroveRewardsToActivePool(
-            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistETHGain
+            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistCollGain
         );
 
         emit TroveUpdated(
@@ -1025,7 +1029,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
             _troveChange.appliedRedistBoldDebtGain,
             _troveChange.upfrontFee,
             int256(_troveChange.debtIncrease) - int256(_troveChange.debtDecrease),
-            _troveChange.appliedRedistETHGain,
+            _troveChange.appliedRedistCollGain,
             int256(_troveChange.collIncrease) - int256(_troveChange.collDecrease)
         );
     }
@@ -1078,18 +1082,12 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
     /*
     * Updates snapshots of system total stakes and total collateral, excluding a given collateral remainder from the calculation.
     * Used in a liquidation sequence.
-    *
-    * The calculation excludes a portion of collateral that is in the ActivePool:
-    *
-    * the total ETH gas compensation from the liquidation sequence
-    *
-    * The ETH as compensation must be excluded as it is always sent out at the very end of the liquidation sequence.
     */
     function _updateSystemSnapshots_excludeCollRemainder(IActivePool _activePool, uint256 _collRemainder) internal {
         totalStakesSnapshot = totalStakes;
 
-        uint256 activeColl = _activePool.getETHBalance();
-        uint256 liquidatedColl = defaultPool.getETHBalance();
+        uint256 activeColl = _activePool.getCollBalance();
+        uint256 liquidatedColl = defaultPool.getCollBalance();
         totalCollateralSnapshot = activeColl - _collRemainder + liquidatedColl;
     }
 
@@ -1314,7 +1312,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
 
         _updateTroveRewardSnapshots(_troveId);
 
-        emit TroveUpdated(_troveId, _troveChange.debtIncrease + _troveChange.upfrontFee, _troveChange.collIncrease, newStake, _annualInterestRate, L_ETH, L_boldDebt);
+        emit TroveUpdated(_troveId, _troveChange.debtIncrease + _troveChange.upfrontFee, _troveChange.collIncrease, newStake, _annualInterestRate, L_coll, L_boldDebt);
 
         emit TroveOperation(
             _troveId,
@@ -1366,7 +1364,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         _mint(_owner, _troveId);
 
         uint256 annualInterestRate = batches[_batchAddress].annualInterestRate;
-        emit TroveUpdated(_troveId, _troveChange.debtIncrease, _troveChange.collIncrease, newStake, annualInterestRate, L_ETH, L_boldDebt);
+        emit TroveUpdated(_troveId, _troveChange.debtIncrease, _troveChange.collIncrease, newStake, annualInterestRate, L_coll, L_boldDebt);
 
         emit TroveOperation(
             _troveId,
@@ -1401,13 +1399,13 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         Troves[_troveId].lastInterestRateAdjTime = uint64(block.timestamp);
 
         _movePendingTroveRewardsToActivePool(
-            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistETHGain
+            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistCollGain
         );
 
         _updateTroveRewardSnapshots(_troveId);
 
         emit TroveUpdated(
-            _troveId, _newDebt, _newColl, Troves[_troveId].stake, _newAnnualInterestRate, L_ETH, L_boldDebt
+            _troveId, _newDebt, _newColl, Troves[_troveId].stake, _newAnnualInterestRate, L_coll, L_boldDebt
         );
 
         emit TroveOperation(
@@ -1417,7 +1415,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
             _troveChange.appliedRedistBoldDebtGain,
             _troveChange.upfrontFee,
             0, // debt increase / decrease
-            _troveChange.appliedRedistETHGain,
+            _troveChange.appliedRedistCollGain,
             0  // coll increase / decrease
         );
     }
@@ -1432,14 +1430,14 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         Troves[_troveId].lastDebtUpdateTime = uint64(block.timestamp);
 
         _movePendingTroveRewardsToActivePool(
-            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistETHGain
+            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistCollGain
         );
 
         uint256 newStake = _updateStakeAndTotalStakes(_troveId, _newColl);
         _updateTroveRewardSnapshots(_troveId);
 
         emit TroveUpdated(
-            _troveId, _newDebt, _newColl, newStake, Troves[_troveId].annualInterestRate, L_ETH, L_boldDebt
+            _troveId, _newDebt, _newColl, newStake, Troves[_troveId].annualInterestRate, L_coll, L_boldDebt
         );
 
         emit TroveOperation(
@@ -1449,7 +1447,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
             _troveChange.appliedRedistBoldDebtGain,
             _troveChange.upfrontFee,
             int256(_troveChange.debtIncrease) - int256(_troveChange.debtDecrease),
-            _troveChange.appliedRedistETHGain,
+            _troveChange.appliedRedistCollGain,
             int256(_troveChange.collIncrease) - int256(_troveChange.collDecrease)
         );
     }
@@ -1472,7 +1470,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         _updateBatchShares(_troveId, _batchAddress, _troveChange, _newBatchColl, _newBatchDebt);
 
         _movePendingTroveRewardsToActivePool(
-            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistETHGain
+            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistCollGain
         );
     }
 
@@ -1489,13 +1487,13 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         Troves[_troveId].lastDebtUpdateTime = uint64(block.timestamp);
 
         _movePendingTroveRewardsToActivePool(
-            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistETHGain
+            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistCollGain
         );
 
         _updateTroveRewardSnapshots(_troveId);
 
         emit TroveUpdated(
-            _troveId, _newDebt, _newColl, Troves[_troveId].stake, Troves[_troveId].annualInterestRate, L_ETH, L_boldDebt
+            _troveId, _newDebt, _newColl, Troves[_troveId].stake, Troves[_troveId].annualInterestRate, L_coll, L_boldDebt
         );
 
         emit TroveOperation(
@@ -1505,7 +1503,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
             _troveChange.appliedRedistBoldDebtGain,
             _troveChange.upfrontFee,
             int256(_troveChange.debtIncrease) - int256(_troveChange.debtDecrease),
-            _troveChange.appliedRedistETHGain,
+            _troveChange.appliedRedistCollGain,
             int256(_troveChange.collIncrease) - int256(_troveChange.collDecrease)
         );
     }
@@ -1602,7 +1600,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         _updateBatchShares(_troveId, _newBatchAddress, _troveChange, _newBatchColl, _newBatchDebt);
 
         _movePendingTroveRewardsToActivePool(
-            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistETHGain
+            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistCollGain
         );
     }
 
@@ -1653,7 +1651,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         batches[_batchAddress].lastDebtUpdateTime = uint64(block.timestamp);
 
         // Collateral
-        uint256 collIncrease = _troveChange.collIncrease + _troveChange.appliedRedistETHGain;
+        uint256 collIncrease = _troveChange.collIncrease + _troveChange.appliedRedistCollGain;
         uint256 collDecrease;
         if (collIncrease > _troveChange.collDecrease) {
             collIncrease -= _troveChange.collDecrease;
@@ -1706,7 +1704,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         }
 
         _updateTroveRewardSnapshots(_troveId);
-        _movePendingTroveRewardsToActivePool(defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistETHGain);
+        _movePendingTroveRewardsToActivePool(defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistCollGain);
     }
 
     function _removeTroveSharesFromBatch(
@@ -1727,7 +1725,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         // We don’t need to increase the shares corresponding to redistribution first, because they would be subtracted immediately after
         // We don’t need to account for interest nor batch fee because it’s proportional to debt shares
         uint256 batchDebtDecrease = _newTroveDebt - _troveChange.upfrontFee - _troveChange.appliedRedistBoldDebtGain;
-        uint256 batchCollDecrease = _newTroveColl - _troveChange.appliedRedistETHGain;
+        uint256 batchCollDecrease = _newTroveColl - _troveChange.appliedRedistCollGain;
 
         batches[_batchAddress].totalDebtShares -= trove.batchDebtShares;
         batches[_batchAddress].debt = _newBatchDebt - batchDebtDecrease;

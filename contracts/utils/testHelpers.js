@@ -302,16 +302,12 @@ class TestHelper {
   // Given a composite debt, returns the actual debt  - i.e. subtracts the virtual debt.
   // Virtual debt = 50 Bold.
   static async getActualDebtFromComposite(compositeDebt, contracts) {
-    const issuedDebt = await contracts.troveManager.getActualDebtFromComposite(
-      compositeDebt,
-    );
-    return issuedDebt;
+    return compositeDebt;
   }
 
   // Adds the gas compensation (50 Bold)
   static async getCompositeDebt(contracts, debt) {
-    const compositeDebt = contracts.borrowerOperations.getCompositeDebt(debt);
-    return compositeDebt;
+    return debt;
   }
 
   static async getTroveEntireCollByAddress(contracts, account) {
@@ -834,8 +830,9 @@ class TestHelper {
 
     const MIN_DEBT = await this.getNetBorrowingAmount(
       contracts,
-      await contracts.constants._MIN_NET_DEBT(),
+      await contracts.constants._MIN_DEBT(),
     );
+
     // Only needed for non-zero borrow fee: .add(this.toBN(1)); // add 1 to avoid rounding issues
 
     const boldAmount = MIN_DEBT.add(extraBoldAmount);
@@ -858,7 +855,8 @@ class TestHelper {
     // );
 
     // approve ERC20 ETH
-    await contracts.WETH.approve(contracts.borrowerOperations.address, extraParams.value, { from: extraParams.from });
+    const ETH_GAS_COMPENSATION = await contracts.constants._ETH_GAS_COMPENSATION();
+    await contracts.WETH.approve(contracts.borrowerOperations.address, extraParams.value.add(ETH_GAS_COMPENSATION), { from: extraParams.from });
 
     let tx;
     if (extraParams.batchManager) {

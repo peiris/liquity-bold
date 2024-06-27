@@ -59,9 +59,7 @@ interface ITroveManager is IERC721, ILiquityBase {
             uint256 batchDebtShares
         );
 
-    function rewardSnapshots(uint256 _id) external view returns (uint256 ETH, uint256 boldDebt);
-
-    // function BOLD_GAS_COMPENSATION() external view returns (uint256);
+    function rewardSnapshots(uint256 _id) external view returns (uint256 coll, uint256 boldDebt);
 
     function getTroveIdsCount() external view returns (uint256);
 
@@ -81,7 +79,7 @@ interface ITroveManager is IERC721, ILiquityBase {
         uint256 _maxIterations
     ) external returns (uint256 _redemeedAmount);
 
-    function getPendingETHReward(uint256 _troveId) external view returns (uint256);
+    function getPendingCollReward(uint256 _troveId) external view returns (uint256);
 
     function getPendingBoldDebtReward(uint256 _troveId) external view returns (uint256);
 
@@ -94,7 +92,7 @@ interface ITroveManager is IERC721, ILiquityBase {
             uint256 entireDebt,
             uint256 entireColl,
             uint256 pendingBoldDebtReward,
-            uint256 pendingETHReward,
+            uint256 pendingCollReward,
             uint256 accruedTroveInterest
         );
 

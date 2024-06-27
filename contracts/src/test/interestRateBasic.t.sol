@@ -838,7 +838,7 @@ contract InterestRateBasic is DevTestSetup {
         uint256 interestRate = 0.1 ether;
         openTroveNoHints100pct(A, 2 ether, borrow, interestRate);
 
-        uint256 debtWithoutFee = borrow + BOLD_GAS_COMPENSATION;
+        uint256 debtWithoutFee = borrow;
         uint256 fee = calcUpfrontFee(debtWithoutFee, interestRate);
 
         assertEqDecimal(
