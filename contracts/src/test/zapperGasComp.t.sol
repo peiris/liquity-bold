@@ -39,10 +39,11 @@ contract ZapperGasCompTest is DevTestSetup {
         // Set first branch as default
         borrowerOperations = contractsArray[1].borrowerOperations;
         troveManager = contractsArray[1].troveManager;
+        troveNFT = contractsArray[1].troveNFT;
         collToken = contractsArray[1].collToken;
 
         // Deploy zapper (TODO: should we move it to deployment.sol?)
-        gasCompZapper = new GasCompZapper(troveManager);
+        gasCompZapper = new GasCompZapper(borrowerOperations, troveManager, troveNFT, WETH);
 
         // Give some Collateral to test accounts
         uint256 initialCollateralAmount = 10_000e18;
