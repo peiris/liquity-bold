@@ -5,7 +5,7 @@ pragma solidity 0.8.18;
 import "../../BorrowerOperations.sol";
 import "./Interfaces/IBorrowerOperationsTester.sol";
 
-/* Tester contract inherits from BorrowerOperations, and provides external functions 
+/* Tester contract inherits from BorrowerOperations, and provides external functions
 for testing the parent's internal functions. */
 contract BorrowerOperationsTester is IBorrowerOperationsTester, BorrowerOperations {
     constructor(IERC20 _collToken, ITroveManager _troveManager, IWETH _weth)
