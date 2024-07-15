@@ -12,7 +12,7 @@ import "./HintHelpers.sol";
 import "./MultiTroveGetter.sol";
 import "./SortedTroves.sol";
 import "./StabilityPool.sol";
-import "./test/TestContracts/TroveManagerTester.sol";
+import "./test/TestContracts/TroveManagerTester.t.sol";
 import "./CollateralRegistry.sol";
 import "./MockInterestRouter.sol";
 import "./test/TestContracts/PriceFeedTestnet.sol";
