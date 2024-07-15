@@ -558,7 +558,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
         _requireNonZeroAdjustment(_troveChange);
         _requireTroveIsOpen(_contractsCache.troveManager, _troveId);
 
-        address owner = _contractsCache.troveManager.ownerOf(_troveId);
+        address owner;// TODO = _contractsCache.troveNFT.ownerOf(_troveId);
 
         if (_troveChange.collDecrease > 0 || _troveChange.debtIncrease > 0) {
             _requireSenderIsOwnerOrRemoveManager(_troveId, owner);
@@ -1192,9 +1192,11 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     }
 
     function _requireCallerIsBorrower(ITroveManager _troveManager, uint256 _troveId) internal view {
+        /*
         require(
-            msg.sender == _troveManager.ownerOf(_troveId), "BorrowerOps: Caller must be the borrower for a withdrawal"
+            msg.sender == _troveNFT.ownerOf(_troveId), "BorrowerOps: Caller must be the borrower for a withdrawal"
         );
+        */
     }
 
     function _requireNonZeroAdjustment(TroveChange memory _troveChange) internal pure {
@@ -1206,7 +1208,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     }
 
     function _requireSenderIsOwner(ITroveManager _troveManager, uint256 _troveId) internal view {
-        require(_troveManager.ownerOf(_troveId) == msg.sender, "BorrowerOps: sender is not Trove owner");
+        //require(_troveManager.ownerOf(_troveId) == msg.sender, "BorrowerOps: sender is not Trove owner");
     }
 
     function _requireSenderIsOwnerOrAddManager(uint256 _troveId, address _owner) internal view {

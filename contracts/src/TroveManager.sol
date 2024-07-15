@@ -15,7 +15,7 @@ import "./Dependencies/Ownable.sol";
 
 // import "forge-std/console2.sol";
 
-contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEvents {
+contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
     string public constant NAME = "TroveManager"; // TODO
     string public constant SYMBOL = "Lv2T"; // TODO
 
@@ -31,6 +31,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
     address public collateralRegistryAddress;
     // Wrapped ETH for liquidation reserve (gas compensation)
     IERC20 public immutable WETH;
+    IERC721 public immutable troveNFT;
 
     // --- Data structures ---
 
@@ -206,7 +207,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         uint256 _liquidationPenaltySP,
         uint256 _liquidationPenaltyRedistribution,
         IERC20 _weth
-    ) ERC721(NAME, SYMBOL) {
+    ) {
         require(_mcr > 1e18 && _mcr < 2e18, "Invalid MCR");
         require(_scr > 1e18 && _scr < 2e18, "Invalid SCR");
         require(_liquidationPenaltySP >= 5e16, "SP penalty too low");
@@ -219,6 +220,8 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         LIQUIDATION_PENALTY_REDISTRIBUTION = _liquidationPenaltyRedistribution;
 
         WETH = _weth;
+
+        troveNFT = new ERC721(NAME, SYMBOL);
     }
 
     // --- Dependency setter ---
@@ -293,7 +296,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         uint256 _price,
         LiquidationValues memory singleLiquidation
     ) internal {
-        address owner = ownerOf(_troveId);
+        address owner = troveNFT.ownerOf(_troveId);
 
         _getLatestTroveData(_troveId, singleLiquidation.trove);
         // TODO: gas: we are calling _getLatestBatchData twice
@@ -1217,7 +1220,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
 
         // burn ERC721
         // TODO: Should we do it?
-        _burn(_troveId);
+        //troveNFT.burn(_troveId);
     }
 
     /*
@@ -1471,7 +1474,7 @@ contract TroveManager is ERC721, LiquityBase, Ownable, ITroveManager, ITroveEven
         totalStakes = newTotalStakes;
 
         // mint ERC721
-        _mint(_owner, _troveId);
+        //troveNFT.mint(_owner, _troveId);
 
         _updateTroveRewardSnapshots(_troveId);
 
