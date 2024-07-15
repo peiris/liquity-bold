@@ -2,8 +2,6 @@
 
 pragma solidity 0.8.18;
 
-import "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
-
 import "./ILiquityBase.sol";
 import "./IStabilityPool.sol";
 import "./IBoldToken.sol";
@@ -12,7 +10,7 @@ import "../Types/LatestTroveData.sol";
 import "../Types/LatestBatchData.sol";
 
 // Common interface for the Trove Manager.
-interface ITroveManager is IERC721, ILiquityBase {
+interface ITroveManager is ILiquityBase {
     enum Status {
         nonExistent,
         active,
@@ -29,6 +27,7 @@ interface ITroveManager is IERC721, ILiquityBase {
     function shutdownTime() external view returns (uint256);
 
     function setAddresses(
+        address _troveNFTAddress,
         address _borrowerOperationsAddress,
         address _activePoolAddress,
         address _defaultPoolAddress,

@@ -81,7 +81,7 @@ contract SPInvariantsTestHandler is BaseHandler {
     }
 
     function openTrove(uint256 borrowed) external returns (uint256 debt) {
-        uint256 i = troveManager.balanceOf(msg.sender);
+        uint256 i = TroveManagerTester(address(troveManager)).balanceOf(msg.sender);
         vm.assume(troveManager.getTroveStatus(_getTroveId(msg.sender, i)) != ITroveManager.Status.active);
 
         borrowed = _bound(borrowed, OPEN_TROVE_BORROWED_MIN, OPEN_TROVE_BORROWED_MAX);
@@ -149,7 +149,7 @@ contract SPInvariantsTestHandler is BaseHandler {
 
     function liquidateMe() external {
         vm.assume(troveManager.getTroveIdsCount() > 1);
-        uint256 troveId = _getTroveId(msg.sender, troveManager.balanceOf(msg.sender));
+        uint256 troveId = _getTroveId(msg.sender, TroveManagerTester(address(troveManager)).balanceOf(msg.sender));
         vm.assume(troveManager.getTroveStatus(troveId) == ITroveManager.Status.active);
 
         (uint256 debt, uint256 coll,,,) = troveManager.getEntireDebtAndColl(troveId);

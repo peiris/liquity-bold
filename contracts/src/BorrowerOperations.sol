@@ -6,6 +6,7 @@ import "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./Interfaces/IBorrowerOperations.sol";
 import "./Interfaces/ITroveManager.sol";
+import "./Interfaces/ITroveNFT.sol";
 import "./Interfaces/IBoldToken.sol";
 import "./Interfaces/ICollSurplusPool.sol";
 import "./Interfaces/ISortedTroves.sol";
@@ -27,6 +28,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
 
     IERC20 public immutable collToken;
     ITroveManager public immutable troveManager;
+    ITroveNFT public immutable troveNFT;
     address gasPoolAddress;
     ICollSurplusPool collSurplusPool;
     IBoldToken public boldToken;
@@ -153,9 +155,10 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     event ShutDown(uint256 _tcr);
     event ShutDownFromOracleFailure(address _oracleAddress);
 
-    constructor(IERC20 _collToken, ITroveManager _troveManager, IERC20 _weth) {
+    constructor(IERC20 _collToken, ITroveManager _troveManager, ITroveNFT _troveNFT, IERC20 _weth) {
         collToken = _collToken;
         troveManager = _troveManager;
+        troveNFT = _troveNFT;
 
         WETH = _weth;
 
@@ -502,7 +505,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
 
         _requireValidAnnualInterestRate(_newAnnualInterestRate);
         _requireIsNotInBatch(_troveId);
-        address owner = contractsCache.troveManager.ownerOf(_troveId);
+        address owner = troveNFT.ownerOf(_troveId);
         _requireSenderIsOwnerOrInterestManager(_troveId, owner);
         _requireInterestRateInDelegateRange(_troveId, _newAnnualInterestRate);
         _requireTroveIsActive(contractsCache.troveManager, _troveId);
@@ -558,7 +561,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
         _requireNonZeroAdjustment(_troveChange);
         _requireTroveIsOpen(_contractsCache.troveManager, _troveId);
 
-        address owner = _contractsCache.troveManager.ownerOf(_troveId);
+        address owner = troveNFT.ownerOf(_troveId);
 
         if (_troveChange.collDecrease > 0 || _troveChange.debtIncrease > 0) {
             _requireSenderIsOwnerOrRemoveManager(_troveId, owner);
@@ -660,7 +663,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     function closeTrove(uint256 _troveId) external override {
         ContractsCacheTMAPBT memory contractsCache = ContractsCacheTMAPBT(troveManager, activePool, boldToken);
 
-        _requireCallerIsBorrower(contractsCache.troveManager, _troveId);
+        _requireCallerIsBorrower(_troveId);
         _requireTroveIsOpen(contractsCache.troveManager, _troveId);
 
         LatestTroveData memory trove = contractsCache.troveManager.getLatestTroveData(_troveId);
@@ -756,12 +759,12 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     }
 
     function setAddManager(uint256 _troveId, address _manager) external {
-        _requireSenderIsOwner(troveManager, _troveId);
+        _requireSenderIsOwner(_troveId);
         addManagerOf[_troveId] = _manager;
     }
 
     function setRemoveManager(uint256 _troveId, address _manager) external {
-        _requireSenderIsOwner(troveManager, _troveId);
+        _requireSenderIsOwner(_troveId);
         removeManagerOf[_troveId] = _manager;
     }
 
@@ -784,7 +787,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
         uint256 _lowerHint,
         uint256 _maxUpfrontFee
     ) external {
-        _requireSenderIsOwner(troveManager, _troveId);
+        _requireSenderIsOwner(_troveId);
         interestIndividualDelegateOf[_troveId] =
             InterestIndividualDelegate(_delegate, _minInterestRate, _maxInterestRate);
         // Can’t have both individual delegation and batch manager
@@ -794,7 +797,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     }
 
     function removeInterestIndividualDelegate(uint256 _troveId) external {
-        _requireSenderIsOwner(troveManager, _troveId); // TODO: should we also allow delegate?
+        _requireSenderIsOwner(_troveId); // TODO: should we also allow delegate?
         delete interestIndividualDelegateOf[_troveId];
     }
 
@@ -915,7 +918,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
         uint256 _lowerHint,
         uint256 _maxUpfrontFee
     ) external {
-        _requireSenderIsOwner(troveManager, _troveId);
+        _requireSenderIsOwner(_troveId);
         _requireValidInterestBatchManager(_newBatchManager);
         LocalVariables_setInterestBatchManager memory vars;
         vars.oldBatchManager = interestBatchManagerOf[_troveId];
@@ -1022,7 +1025,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     ) public override {
         ContractsCacheTMAPBTST memory contractsCache =
             ContractsCacheTMAPBTST(troveManager, activePool, boldToken, sortedTroves);
-        _requireSenderIsOwner(contractsCache.troveManager, _troveId);
+        _requireSenderIsOwner(_troveId);
 
         LocalVariables_removeFromBatch memory vars;
 
@@ -1191,9 +1194,9 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
         require(hasBeenShutDown, "BO: Branch is not shut down");
     }
 
-    function _requireCallerIsBorrower(ITroveManager _troveManager, uint256 _troveId) internal view {
+    function _requireCallerIsBorrower(uint256 _troveId) internal view {
         require(
-            msg.sender == _troveManager.ownerOf(_troveId), "BorrowerOps: Caller must be the borrower for a withdrawal"
+            msg.sender == troveNFT.ownerOf(_troveId), "BorrowerOps: Caller must be the borrower for a withdrawal"
         );
     }
 
@@ -1205,8 +1208,8 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
         );
     }
 
-    function _requireSenderIsOwner(ITroveManager _troveManager, uint256 _troveId) internal view {
-        require(_troveManager.ownerOf(_troveId) == msg.sender, "BorrowerOps: sender is not Trove owner");
+    function _requireSenderIsOwner(uint256 _troveId) internal view {
+        require(troveNFT.ownerOf(_troveId) == msg.sender, "BorrowerOps: sender is not Trove owner");
     }
 
     function _requireSenderIsOwnerOrAddManager(uint256 _troveId, address _owner) internal view {
