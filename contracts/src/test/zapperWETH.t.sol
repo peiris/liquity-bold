@@ -47,9 +47,10 @@ contract ZapperWETHTest is DevTestSetup {
         // Set first branch as default
         borrowerOperations = contractsArray[0].borrowerOperations;
         troveManager = contractsArray[0].troveManager;
+        troveNFT = contractsArray[0].troveNFT;
 
         // Deploy zapper (TODO: should we move it to deployment.sol?)
-        wethZapper = new WETHZapper(troveManager);
+        wethZapper = new WETHZapper(borrowerOperations, troveManager, troveNFT, WETH);
     }
 
     function testCanOpenTrove() external {

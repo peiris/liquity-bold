@@ -9,8 +9,8 @@ import "../../Interfaces/IDefaultPool.sol";
 import "../../Interfaces/IPriceFeed.sol";
 import "../../Interfaces/ISortedTroves.sol";
 import "../../Interfaces/IStabilityPool.sol";
-import "./BorrowerOperationsTester.sol";
-import "./TroveManagerTester.sol";
+import "./BorrowerOperationsTester.t.sol";
+import "./TroveManagerTester.t.sol";
 import "../../Interfaces/ICollateralRegistry.sol";
 import "./PriceFeedTestnet.sol";
 import "../../Interfaces/IInterestRouter.sol";
@@ -23,6 +23,7 @@ import "forge-std/console2.sol";
 contract BaseTest is TestAccounts {
     uint256 CCR;
     uint256 MCR;
+    uint256 SCR;
     uint256 LIQUIDATION_PENALTY_SP;
     uint256 LIQUIDATION_PENALTY_REDISTRIBUTION;
 
@@ -34,6 +35,7 @@ contract BaseTest is TestAccounts {
     ISortedTroves sortedTroves;
     IStabilityPool stabilityPool;
     ITroveManagerTester troveManager;
+    ITroveNFT troveNFT;
     IBoldToken boldToken;
     ICollateralRegistry collateralRegistry;
     IPriceFeedTestnet priceFeed;
@@ -418,17 +420,22 @@ contract BaseTest is TestAccounts {
             );
         }
 
+        IBorrowerOperations.OpenTroveAndJoinInterestBatchManagerParams memory params = IBorrowerOperations
+            .OpenTroveAndJoinInterestBatchManagerParams({
+            owner: _troveOwner,
+            ownerIndex: 0,
+            collAmount: _coll,
+            boldAmount: _debt,
+            upperHint: 0,
+            lowerHint: 0,
+            interestBatchManager: _batchAddress,
+            maxUpfrontFee: 1e24,
+            addManager: address(0),
+            removeManager: address(0),
+            receiver: address(0)
+        });
         vm.startPrank(_troveOwner);
-        uint256 troveId = borrowerOperations.openTroveAndJoinInterestBatchManager(
-            _troveOwner,
-            0,
-            _coll,
-            _debt,
-            0, // _upperHint
-            0, // _lowerHint
-            _batchAddress,
-            1e24
-        );
+        uint256 troveId = borrowerOperations.openTroveAndJoinInterestBatchManager(params);
         vm.stopPrank();
 
         return troveId;

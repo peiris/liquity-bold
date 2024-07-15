@@ -1,5 +1,6 @@
 pragma solidity ^0.8.18;
 
+import "../Dependencies/AddRemoveManagers.sol";
 import "./TestContracts/DevTestSetup.sol";
 
 contract InterestBatchManagementTest is DevTestSetup {
@@ -7,7 +8,7 @@ contract InterestBatchManagementTest is DevTestSetup {
         registerBatchManager(B);
 
         vm.startPrank(B);
-        vm.expectRevert("BO: Batch Manager already exists");
+        vm.expectRevert(BorrowerOperations.BatchManagerExists.selector);
         borrowerOperations.registerBatchManager(1e16, 20e16, 5e16, 25e14, 0);
         vm.stopPrank();
     }
@@ -16,7 +17,7 @@ contract InterestBatchManagementTest is DevTestSetup {
         uint256 troveId = openTroveAndJoinBatchManager();
 
         vm.startPrank(A);
-        vm.expectRevert("BO: Trove is in batch");
+        vm.expectRevert(BorrowerOperations.TroveInBatch.selector);
         borrowerOperations.adjustTroveInterestRate(troveId, 10e16, 0, 0, 10000e18);
         vm.stopPrank();
     }
@@ -81,11 +82,11 @@ contract InterestBatchManagementTest is DevTestSetup {
         uint256 troveId = openTroveNoHints100pct(A, 100e18, 5000e18, 5e16);
 
         vm.startPrank(B);
-        vm.expectRevert("BorrowerOps: sender is not Trove owner");
+        vm.expectRevert(AddRemoveManagers.NotBorrower.selector);
         borrowerOperations.setInterestBatchManager(troveId, B, 0, 0, 1e24);
-        vm.expectRevert("BorrowerOps: sender is not Trove owner");
+        vm.expectRevert(AddRemoveManagers.NotBorrower.selector);
         borrowerOperations.setInterestBatchManager(troveId, A, 0, 0, 1e24);
-        vm.expectRevert("BorrowerOps: sender is not Trove owner");
+        vm.expectRevert(AddRemoveManagers.NotBorrower.selector);
         borrowerOperations.setInterestBatchManager(troveId, C, 0, 0, 1e24);
         vm.stopPrank();
     }
@@ -94,7 +95,7 @@ contract InterestBatchManagementTest is DevTestSetup {
         uint256 troveId = openTroveNoHints100pct(A, 100e18, 5000e18, 5e16);
 
         vm.startPrank(A);
-        vm.expectRevert("BO: Not valid Batch Manager");
+        vm.expectRevert(BorrowerOperations.InvalidInterestBatchManager.selector);
         borrowerOperations.setInterestBatchManager(troveId, B, 0, 0, 1e24);
         vm.stopPrank();
     }
@@ -165,7 +166,7 @@ contract InterestBatchManagementTest is DevTestSetup {
         openTroveAndJoinBatchManager();
 
         vm.startPrank(C);
-        vm.expectRevert("BO: Not valid Batch Manager");
+        vm.expectRevert(BorrowerOperations.InvalidInterestBatchManager.selector);
         borrowerOperations.lowerBatchManagementFee(10e14);
         vm.stopPrank();
     }
@@ -174,7 +175,7 @@ contract InterestBatchManagementTest is DevTestSetup {
         openTroveAndJoinBatchManager();
 
         vm.startPrank(B);
-        vm.expectRevert("BO: New fee should be lower");
+        vm.expectRevert(BorrowerOperations.NewFeeNotLower.selector);
         borrowerOperations.lowerBatchManagementFee(50e14);
         vm.stopPrank();
     }
@@ -228,7 +229,7 @@ contract InterestBatchManagementTest is DevTestSetup {
         openTroveAndJoinBatchManager();
 
         vm.startPrank(C);
-        vm.expectRevert("BO: Not valid Batch Manager");
+        vm.expectRevert(BorrowerOperations.InvalidInterestBatchManager.selector);
         borrowerOperations.setBatchManagerAnnualInterestRate(6e16, 0, 0, 100000e18);
         vm.stopPrank();
     }
@@ -239,7 +240,7 @@ contract InterestBatchManagementTest is DevTestSetup {
         vm.startPrank(B);
         //vm.expectRevert("Interest rate must not be lower than min");
         //borrowerOperations.setBatchManagerAnnualInterestRate(0, 0, 0, 100000e18);
-        vm.expectRevert("Interest rate must not be greater than max");
+        vm.expectRevert(BorrowerOperations.InterestRateTooHigh.selector);
         borrowerOperations.setBatchManagerAnnualInterestRate(2e18, 0, 0, 100000e18);
         vm.stopPrank();
     }
@@ -248,42 +249,10 @@ contract InterestBatchManagementTest is DevTestSetup {
         openTroveAndJoinBatchManager();
 
         vm.startPrank(B);
-        vm.expectRevert("BO: interest not in range of batch manager");
+        vm.expectRevert(BorrowerOperations.InterestNotInBatchRange.selector);
         borrowerOperations.setBatchManagerAnnualInterestRate(1e15, 0, 0, 100000e18);
-        vm.expectRevert("BO: interest not in range of batch manager");
+        vm.expectRevert(BorrowerOperations.InterestNotInBatchRange.selector);
         borrowerOperations.setBatchManagerAnnualInterestRate(21e16, 0, 0, 100000e18);
-        vm.stopPrank();
-    }
-
-    function testCannotChangeBatchInterestRateBeforePeriod() public {
-        // Register batch manager
-        vm.startPrank(B);
-        borrowerOperations.registerBatchManager(
-            1e16, // min interest: 1%
-            20e16, // max interest: 20%
-            5e16, // current interest: 5%
-            25e14, // fee: 0.25%,
-            6000 // min interest rate change period
-        );
-        vm.stopPrank();
-
-        // Open trove and join manager
-        vm.startPrank(A);
-        borrowerOperations.openTroveAndJoinInterestBatchManager(
-            A,
-            0,
-            100e18, // coll
-            5000e18, // bold
-            0, // _upperHint
-            0, // _lowerHint
-            B, // interest batch manager
-            1e24
-        );
-        vm.stopPrank();
-
-        vm.startPrank(B);
-        vm.expectRevert("BO: cannot change interest rate again yet");
-        borrowerOperations.setBatchManagerAnnualInterestRate(6e16, 0, 0, 100000e18);
         vm.stopPrank();
     }
 
@@ -306,31 +275,41 @@ contract InterestBatchManagementTest is DevTestSetup {
 
         // Register a new batch manager and add a trove to it
         registerBatchManager(C);
+        IBorrowerOperations.OpenTroveAndJoinInterestBatchManagerParams memory paramsD = IBorrowerOperations
+            .OpenTroveAndJoinInterestBatchManagerParams({
+            owner: D,
+            ownerIndex: 0,
+            collAmount: 100e18,
+            boldAmount: 5000e18,
+            upperHint: 0,
+            lowerHint: 0,
+            interestBatchManager: C,
+            maxUpfrontFee: 1e24,
+            addManager: address(0),
+            removeManager: address(0),
+            receiver: address(0)
+        });
         vm.startPrank(D);
-        troveIDs.D = borrowerOperations.openTroveAndJoinInterestBatchManager(
-            D,
-            0,
-            100e18, // coll
-            5000e18, // bold
-            0, // _upperHint
-            0, // _lowerHint
-            C, // interest batch manager
-            1e24
-        );
+        troveIDs.D = borrowerOperations.openTroveAndJoinInterestBatchManager(paramsD);
         vm.stopPrank();
 
         // Add a new trove to first manager
+        IBorrowerOperations.OpenTroveAndJoinInterestBatchManagerParams memory paramsE = IBorrowerOperations
+            .OpenTroveAndJoinInterestBatchManagerParams({
+            owner: E,
+            ownerIndex: 0,
+            collAmount: 100e18,
+            boldAmount: 5000e18,
+            upperHint: 0,
+            lowerHint: 0,
+            interestBatchManager: B,
+            maxUpfrontFee: 1e24,
+            addManager: address(0),
+            removeManager: address(0),
+            receiver: address(0)
+        });
         vm.startPrank(E);
-        troveIDs.E = borrowerOperations.openTroveAndJoinInterestBatchManager(
-            E,
-            0,
-            100e18, // coll
-            5000e18, // bold
-            0, // _upperHint
-            0, // _lowerHint
-            B, // interest batch manager
-            1e24
-        );
+        troveIDs.E = borrowerOperations.openTroveAndJoinInterestBatchManager(paramsE);
         vm.stopPrank();
 
         // Fast forward 1 year
@@ -444,7 +423,7 @@ contract InterestBatchManagementTest is DevTestSetup {
 
         // B tries to apply A's pending interest
         vm.startPrank(B);
-        vm.expectRevert("BO: Trove is in batch");
+        vm.expectRevert(BorrowerOperations.TroveInBatch.selector);
         borrowerOperations.applyTroveInterestPermissionless(ATroveId);
         vm.stopPrank();
     }

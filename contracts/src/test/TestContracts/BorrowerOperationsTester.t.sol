@@ -7,9 +7,9 @@ import "./Interfaces/IBorrowerOperationsTester.sol";
 
 /* Tester contract inherits from BorrowerOperations, and provides external functions
 for testing the parent's internal functions. */
-contract BorrowerOperationsTester is IBorrowerOperationsTester, BorrowerOperations {
-    constructor(IERC20 _collToken, ITroveManager _troveManager, IWETH _weth)
-        BorrowerOperations(_collToken, _troveManager, _weth)
+contract BorrowerOperationsTester is BorrowerOperations, IBorrowerOperationsTester {
+    constructor(uint256 _ccr, uint256 _mcr, uint256 _scr, IERC20 _collToken, ITroveNFT _troveNFT, IWETH _weth)
+        BorrowerOperations(_ccr, _mcr, _scr, _collToken, _troveNFT, _weth)
     {}
 
     function get_CCR() external view returns (uint256) {
