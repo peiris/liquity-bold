@@ -91,7 +91,7 @@ contract InterestRateBasic is DevTestSetup {
 
         // B (who is not delegate) tries to adjust it
         vm.startPrank(B);
-        vm.expectRevert("BorrowerOps: sender is neither Trove owner nor interest manager");
+        vm.expectRevert(BorrowerOperations.NotOwnerNorInterestManager.selector);
         borrowerOperations.adjustTroveInterestRate(A_Id, 40e16, 0, 0, 0);
         vm.stopPrank();
     }

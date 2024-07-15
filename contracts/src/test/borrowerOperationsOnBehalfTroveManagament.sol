@@ -45,7 +45,7 @@ contract BorrowerOperationsOnBehalfTroveManagamentTest is DevTestSetup {
 
         // Try to set add manager
         vm.startPrank(B);
-        vm.expectRevert("BorrowerOps: sender is not Trove owner");
+        vm.expectRevert(BorrowerOperations.NotBorrower.selector);
         borrowerOperations.setAddManager(ATroveId, B);
         vm.stopPrank();
 
@@ -53,7 +53,7 @@ contract BorrowerOperationsOnBehalfTroveManagamentTest is DevTestSetup {
         assertEq(borrowerOperations.addManagerOf(ATroveId), ZERO_ADDRESS);
 
         vm.startPrank(C);
-        vm.expectRevert("BorrowerOps: sender is not Trove owner");
+        vm.expectRevert(BorrowerOperations.NotBorrower.selector);
         borrowerOperations.setAddManager(ATroveId, B);
         vm.stopPrank();
 
@@ -204,7 +204,7 @@ contract BorrowerOperationsOnBehalfTroveManagamentTest is DevTestSetup {
 
         // Try to set add manager
         vm.startPrank(B);
-        vm.expectRevert("BorrowerOps: sender is not Trove owner");
+        vm.expectRevert(BorrowerOperations.NotBorrower.selector);
         borrowerOperations.setRemoveManager(ATroveId, B);
         vm.stopPrank();
 
@@ -212,7 +212,7 @@ contract BorrowerOperationsOnBehalfTroveManagamentTest is DevTestSetup {
         assertEq(borrowerOperations.removeManagerReceiverOf(ATroveId, B), ZERO_ADDRESS);
 
         vm.startPrank(C);
-        vm.expectRevert("BorrowerOps: sender is not Trove owner");
+        vm.expectRevert(BorrowerOperations.NotBorrower.selector);
         borrowerOperations.setRemoveManager(ATroveId, B);
         vm.stopPrank();
 
@@ -339,7 +339,7 @@ contract BorrowerOperationsOnBehalfTroveManagamentTest is DevTestSetup {
         vm.startPrank(B);
         uint256 BInitialCollBalance = collToken.balanceOf(B);
 
-        vm.expectRevert("BorrowerOps: sender is neither Trove owner nor remove-manager");
+        vm.expectRevert(BorrowerOperations.NotOwnerNorRemoveManager.selector);
         borrowerOperations.withdrawColl(ATroveId, 1 ether);
         vm.stopPrank();
 
@@ -349,7 +349,7 @@ contract BorrowerOperationsOnBehalfTroveManagamentTest is DevTestSetup {
         vm.stopPrank();
 
         vm.startPrank(B);
-        vm.expectRevert("BorrowerOps: sender is neither Trove owner nor remove-manager");
+        vm.expectRevert(BorrowerOperations.NotOwnerNorRemoveManager.selector);
         borrowerOperations.withdrawColl(ATroveId, 1 ether);
         vm.stopPrank();
 
@@ -476,7 +476,7 @@ contract BorrowerOperationsOnBehalfTroveManagamentTest is DevTestSetup {
         // Manager can’t withdraw bold
         uint256 BInitialBoldBalance = boldToken.balanceOf(B);
 
-        vm.expectRevert("BorrowerOps: sender is neither Trove owner nor remove-manager");
+        vm.expectRevert(BorrowerOperations.NotOwnerNorRemoveManager.selector);
         this.withdrawBold100pct(B, ATroveId, 10e18);
 
         // Set add manager - still won’t work
@@ -484,7 +484,7 @@ contract BorrowerOperationsOnBehalfTroveManagamentTest is DevTestSetup {
         borrowerOperations.setAddManager(ATroveId, B);
         vm.stopPrank();
 
-        vm.expectRevert("BorrowerOps: sender is neither Trove owner nor remove-manager");
+        vm.expectRevert(BorrowerOperations.NotOwnerNorRemoveManager.selector);
         this.withdrawBold100pct(B, ATroveId, 10e18);
 
         assertEq(boldToken.balanceOf(A), AInitialBoldBalance + 10e18, "Wrong owner balance");

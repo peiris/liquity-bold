@@ -10,12 +10,16 @@ import "./IWETH.sol";
 
 // Common interface for the Borrower Operations.
 interface IBorrowerOperations is ILiquityBase, IAddRemoveManagers {
+    function MCR() external view returns (uint256);
+    function SCR() external view returns (uint256);
+    function troveManager() external view returns (ITroveManager);
     function sortedTroves() external view returns (ISortedTroves);
     function collToken() external view returns (IERC20);
     function boldToken() external view returns (IBoldToken);
     function WETH() external view returns (IWETH);
 
     function setAddresses(
+        address _troveManagerAddress,
         address _activePoolAddress,
         address _defaultPoolAddress,
         address _gasPoolAddress,
