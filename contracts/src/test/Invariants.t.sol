@@ -13,7 +13,7 @@ import {_deployAndConnectContractsMultiColl, LiquityContractsDev, TroveManagerPa
 import {StringFormatting} from "./Utils/StringFormatting.sol";
 import {BaseInvariantTest} from "./TestContracts/BaseInvariantTest.sol";
 import {BaseMultiCollateralTest} from "./TestContracts/BaseMultiCollateralTest.sol";
-import {InvariantsTestHandler} from "./TestContracts/InvariantsTestHandler.sol";
+import {InvariantsTestHandler} from "./TestContracts/InvariantsTestHandler.t.sol";
 
 struct BatchIdSet {
     mapping(BatchId => bool) _has;

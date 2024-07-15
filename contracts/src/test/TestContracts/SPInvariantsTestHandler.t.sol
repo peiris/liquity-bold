@@ -11,7 +11,7 @@ import {IPriceFeedTestnet} from "./Interfaces/IPriceFeedTestnet.sol";
 import {mulDivCeil} from "../Utils/Math.sol";
 import {StringFormatting} from "../Utils/StringFormatting.sol";
 import {BaseHandler} from "./BaseHandler.sol";
-import {TroveManagerTester} from "./TroveManagerTester.sol";
+import {TroveManagerTester} from "./TroveManagerTester.t.sol";
 
 import {
     DECIMAL_PRECISION,
