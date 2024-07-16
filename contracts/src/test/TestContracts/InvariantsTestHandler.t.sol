@@ -67,7 +67,7 @@ function update(mapping(uint256 => uint256) storage m, uint256 i, int256 delta) 
     }
 }
 
-function isOpen(ITroveManager troveManager, uint256 troveId) view returns (bool) {
+function isOpen(ITroveManagerTester troveManager, uint256 troveId) view returns (bool) {
     ITroveManager.Status status = troveManager.getTroveStatus(troveId);
     return status == ITroveManager.Status.active || status == ITroveManager.Status.unredeemable;
 }

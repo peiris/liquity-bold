@@ -8,6 +8,7 @@ import {IActivePool} from "../Interfaces/IActivePool.sol";
 import {ISortedTroves} from "../Interfaces/ISortedTroves.sol";
 import {IStabilityPool} from "../Interfaces/IStabilityPool.sol";
 import {ITroveManager} from "../Interfaces/ITroveManager.sol";
+import {ITroveManagerTester} from "./TestContracts/Interfaces/ITroveManagerTester.sol";
 import {BatchId} from "../Types/BatchId.sol";
 import {_deployAndConnectContractsMultiColl, LiquityContractsDev, TroveManagerParams} from "../deployment.sol";
 import {StringFormatting} from "./Utils/StringFormatting.sol";
@@ -157,7 +158,7 @@ contract InvariantsTest is BaseInvariantTest, BaseMultiCollateralTest {
 
     function invariant_AllCollClaimable() external {
         for (uint256 j = 0; j < branches.length; ++j) {
-            ITroveManager troveManager = branches[j].troveManager;
+            ITroveManagerTester troveManager = branches[j].troveManager;
             uint256 numTroves = troveManager.getTroveIdsCount();
             uint256 systemColl = troveManager.getEntireSystemColl();
             uint256 trovesColl = 0;

@@ -913,20 +913,6 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
         rewardSnapshots[_troveId].boldDebt = L_boldDebt;
     }
 
-    // Get the borrower's pending accumulated Coll reward, earned by their stake
-    function getPendingCollReward(uint256 _troveId) external view override returns (uint256 redistCollGain) {
-        LatestTroveData memory trove;
-        _getLatestTroveData(_troveId, trove);
-        return trove.redistCollGain;
-    }
-
-    // Get the borrower's pending accumulated Bold reward, earned by their stake
-    function getPendingBoldDebtReward(uint256 _troveId) external view override returns (uint256 redistBoldDebtGain) {
-        LatestTroveData memory trove;
-        _getLatestTroveData(_troveId, trove);
-        return trove.redistBoldDebtGain;
-    }
-
     function hasRedistributionGains(uint256 _troveId) external view override returns (bool) {
         /*
         * A Trove has redistribution gains if its snapshot is less than the current rewards per-unit-staked sum:
@@ -1004,34 +990,13 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
         _getLatestTroveData(_troveId, trove);
     }
 
-    function getEntireDebtAndColl(uint256 _troveId)
-        external
-        view
-        returns (
-            uint256 entireDebt,
-            uint256 entireColl,
-            uint256 pendingBoldDebtReward,
-            uint256 pendingCollReward,
-            uint256 accruedTroveInterest
-        )
-    {
-        LatestTroveData memory trove;
-        _getLatestTroveData(_troveId, trove);
-
-        return
-            (trove.entireDebt, trove.entireColl, trove.redistBoldDebtGain, trove.redistCollGain, trove.accruedInterest);
-    }
-
-    function getTroveEntireDebt(uint256 _troveId) public view returns (uint256) {
-        LatestTroveData memory trove;
-        _getLatestTroveData(_troveId, trove);
-        return trove.entireDebt;
-    }
-
-    function getTroveEntireColl(uint256 _troveId) external view returns (uint256) {
-        LatestTroveData memory trove;
-        _getLatestTroveData(_troveId, trove);
-        return trove.entireColl;
+    function getTroveAnnualInterestRate(uint256 _troveId) external view returns (uint256) {
+        Trove memory trove = Troves[_troveId];
+        address batchAddress = _getBatchManager(trove);
+        if (batchAddress != address(0)) {
+            return batches[batchAddress].annualInterestRate;
+        }
+        return trove.annualInterestRate;
     }
 
     function _getBatchManager(uint256 _troveId) internal view returns (address) {
@@ -1066,10 +1031,6 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
 
     function getLatestBatchData(address _batchAddress) external view returns (LatestBatchData memory batch) {
         _getLatestBatchData(_batchAddress, batch);
-    }
-
-    function getBatchAnnualInterestRate(address _batchAddress) external view returns (uint256) {
-        return batches[_batchAddress].annualInterestRate;
     }
 
     // Update borrower's stake based on their latest collateral value
@@ -1134,94 +1095,6 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
 
         _defaultPool.increaseBoldDebt(_debtToRedistribute);
         _activePool.sendCollToDefaultPool(_collToRedistribute);
-    }
-
-    function onCloseTrove(
-        uint256 _troveId,
-        TroveChange memory _troveChange, // decrease vars: entire, with interest, batch fee and redistribution
-        address _batchAddress,
-        uint256 _newBatchColl,
-        uint256 _newBatchDebt // entire, with interest and batch fee
-    ) external override {
-        _requireCallerIsBorrowerOperations();
-        _closeTrove(_troveId, _troveChange, _batchAddress, _newBatchColl, _newBatchDebt, Status.closedByOwner);
-        _movePendingTroveRewardsToActivePool(
-            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistCollGain
-        );
-
-        emit TroveUpdated(
-            _troveId,
-            0, // _debt
-            0, // _coll
-            0, // _stake
-            0, // _annualInterestRate
-            0, // _snapshotOfTotalDebtRedist
-            0 // _snapshotOfTotalCollRedist
-        );
-
-        emit TroveOperation(
-            _troveId,
-            Operation.closeTrove,
-            0, // _annualInterestRate
-            _troveChange.appliedRedistBoldDebtGain,
-            _troveChange.upfrontFee,
-            int256(_troveChange.debtIncrease) - int256(_troveChange.debtDecrease),
-            _troveChange.appliedRedistCollGain,
-            int256(_troveChange.collIncrease) - int256(_troveChange.collDecrease)
-        );
-    }
-
-    function _closeTrove(
-        uint256 _troveId,
-        TroveChange memory _troveChange, // decrease vars: entire, with interest, batch fee and redistribution
-        address _batchAddress,
-        uint256 _newBatchColl,
-        uint256 _newBatchDebt, // entire, with interest and batch fee
-        Status closedStatus
-    ) internal {
-        assert(closedStatus == Status.closedByLiquidation || closedStatus == Status.closedByOwner);
-
-        uint256 TroveIdsArrayLength = TroveIds.length;
-        _requireMoreThanOneTroveInSystem(TroveIdsArrayLength);
-
-        _removeTroveId(_troveId, TroveIdsArrayLength);
-
-        Trove memory trove = Troves[_troveId];
-
-        // If trove belongs to a batch, remove from it
-        if (_batchAddress != address(0)) {
-            if (trove.status == Status.active) {
-                sortedTroves.removeFromBatch(_troveId);
-            }
-
-            _removeTroveSharesFromBatch(
-                _troveId,
-                _troveChange.collDecrease,
-                _troveChange.debtDecrease,
-                _troveChange,
-                _batchAddress,
-                _newBatchColl,
-                _newBatchDebt
-            );
-        } else {
-            if (trove.status == Status.active) {
-                sortedTroves.remove(_troveId);
-            }
-        }
-
-        uint256 newTotalStakes = totalStakes - trove.stake;
-        totalStakes = newTotalStakes;
-
-        // Zero Trove properties
-        delete Troves[_troveId];
-        Troves[_troveId].status = closedStatus;
-
-        // Zero Trove snapshots
-        delete rewardSnapshots[_troveId];
-
-        // burn ERC721
-        // TODO: Should we do it?
-        troveNFT.burn(_troveId);
     }
 
     /*
@@ -1370,72 +1243,6 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
     }
 
     // --- Trove property getters ---
-
-    function getTroveStatus(uint256 _troveId) external view override returns (Status) {
-        return Troves[_troveId].status;
-    }
-
-    function getTroveStake(uint256 _troveId) external view override returns (uint256) {
-        return Troves[_troveId].stake;
-    }
-
-    function getTroveDebt(uint256 _troveId) external view override returns (uint256) {
-        Trove memory trove = Troves[_troveId];
-        address batchAddress = _getBatchManager(trove);
-        if (batchAddress != address(0)) {
-            Batch memory batch = batches[batchAddress];
-            if (batch.totalDebtShares == 0) return 0;
-            return batch.debt * trove.batchDebtShares / batch.totalDebtShares;
-        }
-        return trove.debt;
-    }
-
-    function getTroveWeightedRecordedDebt(uint256 _troveId) public view returns (uint256) {
-        Trove memory trove = Troves[_troveId];
-        address batchAddress = _getBatchManager(trove);
-        if (batchAddress != address(0)) {
-            Batch memory batch = batches[batchAddress];
-            if (batch.totalDebtShares == 0) return 0;
-            return batch.debt * trove.batchDebtShares / batch.totalDebtShares * batch.annualInterestRate;
-        }
-        return trove.debt * trove.annualInterestRate;
-    }
-
-    function getTroveColl(uint256 _troveId) external view override returns (uint256) {
-        Trove memory trove = Troves[_troveId];
-        return trove.coll;
-    }
-
-    function getTroveAnnualInterestRate(uint256 _troveId) external view returns (uint256) {
-        Trove memory trove = Troves[_troveId];
-        address batchAddress = _getBatchManager(trove);
-        if (batchAddress != address(0)) {
-            return batches[batchAddress].annualInterestRate;
-        }
-        return trove.annualInterestRate;
-    }
-
-    function getTroveLastDebtUpdateTime(uint256 _troveId) external view returns (uint256) {
-        Trove memory trove = Troves[_troveId];
-        address batchAddress = _getBatchManager(trove);
-        if (batchAddress != address(0)) {
-            return batches[batchAddress].lastDebtUpdateTime;
-        }
-        return trove.lastDebtUpdateTime;
-    }
-
-    function getBatchLastDebtUpdateTime(address _batchAddress) external view returns (uint256) {
-        return batches[_batchAddress].lastDebtUpdateTime;
-    }
-
-    function troveIsStale(uint256 _troveId) external view returns (bool) {
-        Trove memory trove = Troves[_troveId];
-        address batchAddress = _getBatchManager(trove);
-        if (batchAddress != address(0)) {
-            return block.timestamp - batches[batchAddress].lastDebtUpdateTime > STALE_TROVE_DURATION;
-        }
-        return block.timestamp - trove.lastDebtUpdateTime > STALE_TROVE_DURATION;
-    }
 
     function getUnbackedPortionPriceAndRedeemability() external returns (uint256, uint256, bool) {
         uint256 totalDebt = getEntireSystemDebt();
@@ -1628,6 +1435,94 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
             _troveChange.appliedRedistCollGain,
             int256(_troveChange.collIncrease) - int256(_troveChange.collDecrease)
         );
+    }
+
+    function onCloseTrove(
+        uint256 _troveId,
+        TroveChange memory _troveChange, // decrease vars: entire, with interest, batch fee and redistribution
+        address _batchAddress,
+        uint256 _newBatchColl,
+        uint256 _newBatchDebt // entire, with interest and batch fee
+    ) external override {
+        _requireCallerIsBorrowerOperations();
+        _closeTrove(_troveId, _troveChange, _batchAddress, _newBatchColl, _newBatchDebt, Status.closedByOwner);
+        _movePendingTroveRewardsToActivePool(
+            defaultPool, _troveChange.appliedRedistBoldDebtGain, _troveChange.appliedRedistCollGain
+        );
+
+        emit TroveUpdated(
+            _troveId,
+            0, // _debt
+            0, // _coll
+            0, // _stake
+            0, // _annualInterestRate
+            0, // _snapshotOfTotalDebtRedist
+            0 // _snapshotOfTotalCollRedist
+        );
+
+        emit TroveOperation(
+            _troveId,
+            Operation.closeTrove,
+            0, // _annualInterestRate
+            _troveChange.appliedRedistBoldDebtGain,
+            _troveChange.upfrontFee,
+            int256(_troveChange.debtIncrease) - int256(_troveChange.debtDecrease),
+            _troveChange.appliedRedistCollGain,
+            int256(_troveChange.collIncrease) - int256(_troveChange.collDecrease)
+        );
+    }
+
+    function _closeTrove(
+        uint256 _troveId,
+        TroveChange memory _troveChange, // decrease vars: entire, with interest, batch fee and redistribution
+        address _batchAddress,
+        uint256 _newBatchColl,
+        uint256 _newBatchDebt, // entire, with interest and batch fee
+        Status closedStatus
+    ) internal {
+        assert(closedStatus == Status.closedByLiquidation || closedStatus == Status.closedByOwner);
+
+        uint256 TroveIdsArrayLength = TroveIds.length;
+        _requireMoreThanOneTroveInSystem(TroveIdsArrayLength);
+
+        _removeTroveId(_troveId, TroveIdsArrayLength);
+
+        Trove memory trove = Troves[_troveId];
+
+        // If trove belongs to a batch, remove from it
+        if (_batchAddress != address(0)) {
+            if (trove.status == Status.active) {
+                sortedTroves.removeFromBatch(_troveId);
+            }
+
+            _removeTroveSharesFromBatch(
+                _troveId,
+                _troveChange.collDecrease,
+                _troveChange.debtDecrease,
+                _troveChange,
+                _batchAddress,
+                _newBatchColl,
+                _newBatchDebt
+            );
+        } else {
+            if (trove.status == Status.active) {
+                sortedTroves.remove(_troveId);
+            }
+        }
+
+        uint256 newTotalStakes = totalStakes - trove.stake;
+        totalStakes = newTotalStakes;
+
+        // Zero Trove properties
+        delete Troves[_troveId];
+        Troves[_troveId].status = closedStatus;
+
+        // Zero Trove snapshots
+        delete rewardSnapshots[_troveId];
+
+        // burn ERC721
+        // TODO: Should we do it?
+        troveNFT.burn(_troveId);
     }
 
     function onAdjustTroveInsideBatch(

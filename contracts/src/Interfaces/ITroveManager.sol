@@ -65,6 +65,11 @@ interface ITroveManager is ILiquityBase {
 
     function getTroveIdsCount() external view returns (uint256);
 
+    function getTCR(uint256 _price) external view returns (uint256);
+
+    function checkBelowCriticalThreshold(uint256 _price) external view returns (bool);
+
+
     function getTroveFromTroveIdsArray(uint256 _index) external view returns (uint256);
 
     function getCurrentICR(uint256 _troveId, uint256 _price) external view returns (uint256);
@@ -84,50 +89,21 @@ interface ITroveManager is ILiquityBase {
     function shutdown() external;
     function urgentRedemption(uint256 _boldAmount, uint256[] calldata _troveIds, uint256 _minCollateral) external;
 
-    function getPendingCollReward(uint256 _troveId) external view returns (uint256);
-
-    function getPendingBoldDebtReward(uint256 _troveId) external view returns (uint256);
+    function getUnbackedPortionPriceAndRedeemability() external returns (uint256, uint256, bool);
 
     function hasRedistributionGains(uint256 _troveId) external view returns (bool);
 
-    function getEntireDebtAndColl(uint256 _troveId)
-        external
-        view
-        returns (
-            uint256 entireDebt,
-            uint256 entireColl,
-            uint256 pendingBoldDebtReward,
-            uint256 pendingCollReward,
-            uint256 accruedTroveInterest
-        );
-
     function getLatestTroveData(uint256 _troveId) external view returns (LatestTroveData memory);
-
-    function getTroveEntireDebt(uint256 _troveId) external view returns (uint256);
-
-    function getTroveEntireColl(uint256 _troveId) external view returns (uint256);
-
-    function getTroveStatus(uint256 _troveId) external view returns (Status);
-
-    function getTroveStake(uint256 _troveId) external view returns (uint256);
-
-    function getTroveDebt(uint256 _troveId) external view returns (uint256);
-
-    function getTroveWeightedRecordedDebt(uint256 _troveId) external returns (uint256);
-
-    function getTroveColl(uint256 _troveId) external view returns (uint256);
-
     function getTroveAnnualInterestRate(uint256 _troveId) external view returns (uint256);
 
-    function calcTroveAccruedInterest(uint256 _troveId) external view returns (uint256);
+    function checkTroveIsActive(uint256 _troveId) external view returns (bool);
+    function checkTroveIsOpen(uint256 _troveId) external view returns (bool);
+    function checkTroveIsUnredeemable(uint256 _troveId) external view returns (bool);
 
+    function calcTroveAccruedInterest(uint256 _troveId) external view returns (uint256);
     function calcTroveAccruedBatchManagementFee(uint256 _troveId) external view returns (uint256);
 
-    function getTroveLastDebtUpdateTime(uint256 _troveId) external view returns (uint256);
-
     function getLatestBatchData(address _batchAddress) external view returns (LatestBatchData memory);
-    function getBatchAnnualInterestRate(address _batchAddress) external view returns (uint256);
-    function getBatchLastDebtUpdateTime(address _batchAddress) external view returns (uint256);
     function calcBatchAccruedInterest(address _batchAddress) external view returns (uint256);
     function calcBatchAccruedManagementFee(address _batchAddress) external view returns (uint256);
 
@@ -221,17 +197,4 @@ interface ITroveManager is ILiquityBase {
     function onApplyBatchInterestAndFee(address _batchAddress, uint256 _newColl, uint256 _newDebt) external;
 
     // -- end of permissioned functions --
-
-    function troveIsStale(uint256 _troveId) external view returns (bool);
-
-    function getTCR(uint256 _price) external view returns (uint256);
-
-    function checkBelowCriticalThreshold(uint256 _price) external view returns (bool);
-
-    function checkTroveIsOpen(uint256 _troveId) external view returns (bool);
-
-    function checkTroveIsActive(uint256 _troveId) external view returns (bool);
-
-    function getUnbackedPortionPriceAndRedeemability() external returns (uint256, uint256, bool);
-    function checkTroveIsUnredeemable(uint256 _troveId) external view returns (bool);
 }
