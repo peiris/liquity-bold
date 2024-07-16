@@ -26,24 +26,10 @@ interface ITroveManager is ILiquityBase {
 
     function shutdownTime() external view returns (uint256);
 
-    function setAddresses(
-        address _troveNFTAddress,
-        address _borrowerOperationsAddress,
-        address _activePoolAddress,
-        address _defaultPoolAddress,
-        address _stabilityPoolAddress,
-        address _gasPoolAddress,
-        address _collSurplusPoolAddress,
-        address _priceFeedAddress,
-        address _boldTokenAddress,
-        address _sortedTrovesAddress
-    ) external;
-    function setCollateralRegistry(address _collateralRegistryAddress) external;
-
     function stabilityPool() external view returns (IStabilityPool);
     function boldToken() external view returns (IBoldToken);
     function sortedTroves() external view returns (ISortedTroves);
-    function borrowerOperationsAddress() external view returns (address);
+    function borrowerOperations() external view returns (IBorrowerOperations);
 
     function Troves(uint256 _id)
         external

@@ -10,13 +10,7 @@ import "./Interfaces/ITroveManagerTester.sol";
 for testing the parent's internal functions. */
 
 contract TroveManagerTester is ITroveManagerTester, TroveManager {
-    constructor(
-        uint256 _mcr,
-        uint256 _scr,
-        uint256 _liquidationPenaltySP,
-        uint256 _liquidationPenaltyRedistribution,
-        IERC20 _weth
-    ) TroveManager(_mcr, _scr, _liquidationPenaltySP, _liquidationPenaltyRedistribution, _weth) {}
+    constructor(ConstructorVars memory _vars) TroveManager(_vars) {}
 
     function computeICR(uint256 _coll, uint256 _debt, uint256 _price) external pure returns (uint256) {
         return LiquityMath._computeCR(_coll, _debt, _price);
@@ -66,7 +60,7 @@ contract TroveManagerTester is ITroveManagerTester, TroveManager {
     }
 
     function getEffectiveRedemptionFeeInColl(uint256 _redeemAmount, uint256 _price) external view returns (uint256) {
-        return ICollateralRegistry(collateralRegistryAddress).getEffectiveRedemptionFeeInBold(_redeemAmount)
+        return collateralRegistry.getEffectiveRedemptionFeeInBold(_redeemAmount)
             * DECIMAL_PRECISION / _price;
     }
 

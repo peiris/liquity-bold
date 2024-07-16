@@ -38,7 +38,7 @@ contract Deployment is DevTestSetup {
 
     function testTroveManagerHasCorrectBorrowerOpsAddress() public {
         address borrowerOperationsAddress = address(borrowerOperations);
-        address recordedBorrowerOperationsAddress = troveManager.borrowerOperationsAddress();
+        address recordedBorrowerOperationsAddress = address(troveManager.borrowerOperations());
         assertEq(borrowerOperationsAddress, recordedBorrowerOperationsAddress);
     }
 

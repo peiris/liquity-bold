@@ -27,8 +27,8 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     // --- Connected contract declarations ---
 
     IERC20 public immutable collToken;
-    ITroveManager public immutable troveManager;
     ITroveNFT public immutable troveNFT;
+    ITroveManager public troveManager;
     address gasPoolAddress;
     ICollSurplusPool collSurplusPool;
     IBoldToken public boldToken;
@@ -155,22 +155,23 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     event ShutDown(uint256 _tcr);
     event ShutDownFromOracleFailure(address _oracleAddress);
 
-    constructor(IERC20 _collToken, ITroveManager _troveManager, ITroveNFT _troveNFT, IERC20 _weth) {
+    constructor(uint256 _mcr, uint256 _scr, IERC20 _collToken, ITroveNFT _troveNFT, IERC20 _weth) {
+        require(_mcr > 1e18 && _mcr < 2e18, "Invalid MCR");
+        require(_scr > 1e18 && _scr < 2e18, "Invalid SCR");
+
         collToken = _collToken;
-        troveManager = _troveManager;
         troveNFT = _troveNFT;
 
         WETH = _weth;
 
-        SCR = _troveManager.SCR();
-        MCR = _troveManager.MCR();
-
-        emit TroveManagerAddressChanged(address(_troveManager));
+        SCR = _scr;
+        MCR = _mcr;
     }
 
     // --- Dependency setters ---
 
     function setAddresses(
+        address _troveManagerAddress,
         address _activePoolAddress,
         address _defaultPoolAddress,
         address _gasPoolAddress,
@@ -182,6 +183,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
         // This makes impossible to open a trove with zero withdrawn Bold
         assert(MIN_DEBT > 0);
 
+        troveManager = ITroveManager(_troveManagerAddress);
         activePool = IActivePool(_activePoolAddress);
         defaultPool = IDefaultPool(_defaultPoolAddress);
         gasPoolAddress = _gasPoolAddress;
@@ -190,6 +192,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
         sortedTroves = ISortedTroves(_sortedTrovesAddress);
         boldToken = IBoldToken(_boldTokenAddress);
 
+        emit TroveManagerAddressChanged(_troveManagerAddress);
         emit ActivePoolAddressChanged(_activePoolAddress);
         emit DefaultPoolAddressChanged(_defaultPoolAddress);
         emit GasPoolAddressChanged(_gasPoolAddress);

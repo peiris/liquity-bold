@@ -9,26 +9,26 @@ import "./Interfaces/IBoldToken.sol";
 import "./Interfaces/ISortedTroves.sol";
 import "./Interfaces/ITroveEvents.sol";
 import "./Interfaces/ITroveNFT.sol";
+import "./Interfaces/ICollateralRegistry.sol";
 import "./Dependencies/LiquityBase.sol";
-import "./Dependencies/Ownable.sol";
 
 // import "forge-std/console2.sol";
 
-contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
+contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     string public constant NAME = "TroveManager"; // TODO
     string public constant SYMBOL = "Lv2T"; // TODO
 
     // --- Connected contract declarations ---
 
     ITroveNFT public troveNFT;
-    address public borrowerOperationsAddress;
+    IBorrowerOperations public borrowerOperations;
     IStabilityPool public override stabilityPool;
     address gasPoolAddress;
     ICollSurplusPool collSurplusPool;
     IBoldToken public override boldToken;
     // A doubly linked list of Troves, sorted by their sorted by their collateral ratios
     ISortedTroves public sortedTroves;
-    address public collateralRegistryAddress;
+    ICollateralRegistry public collateralRegistry;
     // Wrapped ETH for liquidation reserve (gas compensation)
     IERC20 public immutable WETH;
 
@@ -201,69 +201,57 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
     event SortedTrovesAddressChanged(address _sortedTrovesAddress);
     event CollateralRegistryAddressChanged(address _collateralRegistryAddress);
 
-    constructor(
-        uint256 _mcr,
-        uint256 _scr,
-        uint256 _liquidationPenaltySP,
-        uint256 _liquidationPenaltyRedistribution,
-        IERC20 _weth
-    ) {
-        require(_mcr > 1e18 && _mcr < 2e18, "Invalid MCR");
-        require(_scr > 1e18 && _scr < 2e18, "Invalid SCR");
-        require(_liquidationPenaltySP >= 5e16, "SP penalty too low");
-        require(_liquidationPenaltySP <= _liquidationPenaltyRedistribution, "SP penalty cannot be > redist");
-        require(_liquidationPenaltyRedistribution <= 10e16, "Redistribution penalty too high");
-
-        MCR = _mcr;
-        SCR = _scr;
-        LIQUIDATION_PENALTY_SP = _liquidationPenaltySP;
-        LIQUIDATION_PENALTY_REDISTRIBUTION = _liquidationPenaltyRedistribution;
-
-        WETH = _weth;
+    struct ConstructorVars {
+        uint256 liquidationPenaltySP;
+        uint256 liquidationPenaltyRedistribution;
+        ITroveNFT troveNFT;
+        IBorrowerOperations borrowerOperations;
+        IActivePool activePool;
+        IDefaultPool defaultPool;
+        IStabilityPool stabilityPool;
+        address gasPoolAddress;
+        ICollSurplusPool collSurplusPool;
+        IPriceFeed priceFeed;
+        IBoldToken boldToken;
+        ISortedTroves sortedTroves;
+        IERC20 weth;
+        ICollateralRegistry collateralRegistry;
     }
 
-    // --- Dependency setter ---
+    constructor(ConstructorVars memory _vars) {
+        require(_vars.liquidationPenaltySP >= 5e16, "SP penalty too low");
+        require(_vars.liquidationPenaltySP <= _vars.liquidationPenaltyRedistribution, "SP penalty cannot be > redist");
+        require(_vars.liquidationPenaltyRedistribution <= 10e16, "Redistribution penalty too high");
 
-    function setAddresses(
-        address _troveNFTAddress,
-        address _borrowerOperationsAddress,
-        address _activePoolAddress,
-        address _defaultPoolAddress,
-        address _stabilityPoolAddress,
-        address _gasPoolAddress,
-        address _collSurplusPoolAddress,
-        address _priceFeedAddress,
-        address _boldTokenAddress,
-        address _sortedTrovesAddress
-    ) external override onlyOwner {
-        troveNFT = ITroveNFT(_troveNFTAddress);
-        borrowerOperationsAddress = _borrowerOperationsAddress;
-        activePool = IActivePool(_activePoolAddress);
-        defaultPool = IDefaultPool(_defaultPoolAddress);
-        stabilityPool = IStabilityPool(_stabilityPoolAddress);
-        gasPoolAddress = _gasPoolAddress;
-        collSurplusPool = ICollSurplusPool(_collSurplusPoolAddress);
-        priceFeed = IPriceFeed(_priceFeedAddress);
-        boldToken = IBoldToken(_boldTokenAddress);
-        sortedTroves = ISortedTroves(_sortedTrovesAddress);
+        MCR = _vars.borrowerOperations.MCR();
+        SCR = _vars.borrowerOperations.SCR();
+        LIQUIDATION_PENALTY_SP = _vars.liquidationPenaltySP;
+        LIQUIDATION_PENALTY_REDISTRIBUTION = _vars.liquidationPenaltyRedistribution;
 
-        emit TroveNFTAddressChanged(_troveNFTAddress);
-        emit BorrowerOperationsAddressChanged(_borrowerOperationsAddress);
-        emit ActivePoolAddressChanged(_activePoolAddress);
-        emit DefaultPoolAddressChanged(_defaultPoolAddress);
-        emit StabilityPoolAddressChanged(_stabilityPoolAddress);
-        emit GasPoolAddressChanged(_gasPoolAddress);
-        emit CollSurplusPoolAddressChanged(_collSurplusPoolAddress);
-        emit PriceFeedAddressChanged(_priceFeedAddress);
-        emit BoldTokenAddressChanged(_boldTokenAddress);
-        emit SortedTrovesAddressChanged(_sortedTrovesAddress);
-    }
+        troveNFT = _vars.troveNFT;
+        borrowerOperations = _vars.borrowerOperations;
+        activePool = _vars.activePool;
+        defaultPool = _vars.defaultPool;
+        stabilityPool = _vars.stabilityPool;
+        gasPoolAddress = _vars.gasPoolAddress;
+        collSurplusPool = _vars.collSurplusPool;
+        priceFeed = _vars.priceFeed;
+        boldToken = _vars.boldToken;
+        sortedTroves = _vars.sortedTroves;
+        WETH = _vars.weth;
+        collateralRegistry = _vars.collateralRegistry;
 
-    function setCollateralRegistry(address _collateralRegistryAddress) external override onlyOwner {
-        collateralRegistryAddress = _collateralRegistryAddress;
-        emit CollateralRegistryAddressChanged(_collateralRegistryAddress);
-
-        _renounceOwnership();
+        emit TroveNFTAddressChanged(address(_vars.troveNFT));
+        emit BorrowerOperationsAddressChanged(address(_vars.borrowerOperations));
+        emit ActivePoolAddressChanged(address(_vars.activePool));
+        emit DefaultPoolAddressChanged(address(_vars.defaultPool));
+        emit StabilityPoolAddressChanged(address(_vars.stabilityPool));
+        emit GasPoolAddressChanged(_vars.gasPoolAddress);
+        emit CollSurplusPoolAddressChanged(address(_vars.collSurplusPool));
+        emit PriceFeedAddressChanged(address(_vars.priceFeed));
+        emit BoldTokenAddressChanged(address(_vars.boldToken));
+        emit SortedTrovesAddressChanged(address(_vars.sortedTroves));
+        emit CollateralRegistryAddressChanged(address(_vars.collateralRegistry));
     }
 
     // --- Getters ---
@@ -1223,11 +1211,11 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
     // --- 'require' wrapper functions ---
 
     function _requireCallerIsBorrowerOperations() internal view {
-        require(msg.sender == borrowerOperationsAddress, "TroveManager: Caller is not the BorrowerOperations contract");
+        require(msg.sender == address(borrowerOperations), "TroveManager: Caller is not the BorrowerOperations contract");
     }
 
     function _requireCallerIsCollateralRegistry() internal view {
-        require(msg.sender == collateralRegistryAddress, "TroveManager: Caller is not the CollateralRegistry contract");
+        require(msg.sender == address(collateralRegistry), "TroveManager: Caller is not the CollateralRegistry contract");
     }
 
     function _requireTroveIsOpen(uint256 _troveId) internal view {
