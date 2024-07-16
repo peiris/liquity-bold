@@ -724,7 +724,6 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
 
         ContractsCacheTMAP memory contractsCache = ContractsCacheTMAP(troveManager, activePool);
 
-        _requireTroveIsStale(contractsCache.troveManager, _troveId);
         _requireTroveIsOpen(contractsCache.troveManager, _troveId);
         _requireIsNotInBatch(_troveId);
 
@@ -1388,10 +1387,6 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
         pure
     {
         require(_oldBatchManagerAddress != _newBatchManagerAddress, "BO: Already has this Batch Manager");
-    }
-
-    function _requireTroveIsStale(ITroveManager _troveManager, uint256 _troveId) internal view {
-        require(_troveManager.troveIsStale(_troveId), "BO: Trove must be stale");
     }
 
     function _requireCallerIsPriceFeed() internal view {
