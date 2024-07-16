@@ -162,8 +162,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
 
         WETH = _weth;
 
-        SCR = _troveManager.SCR();
-        MCR = _troveManager.MCR();
+        (MCR, SCR,,) = _troveManager.getConstants();
 
         emit TroveManagerAddressChanged(address(_troveManager));
     }

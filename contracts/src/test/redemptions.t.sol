@@ -358,7 +358,7 @@ contract Redemptions is DevTestSetup {
         priceFeed.setPrice(price);
 
         assertFalse(troveManager.checkBelowCriticalThreshold(price));
-        assertLt(troveManager.getCurrentICR(troveIDs.E, price), troveManager.MCR());
+        assertLt(troveManager.getCurrentICR(troveIDs.E, price), MCR);
 
         // A liquidates E
         liquidate(A, troveIDs.E);
@@ -440,7 +440,7 @@ contract Redemptions is DevTestSetup {
         priceFeed.setPrice(price);
 
         // assertFalse(troveManager.checkBelowCriticalThreshold(price));
-        assertLt(troveManager.getCurrentICR(troveID_E, price), troveManager.MCR());
+        assertLt(troveManager.getCurrentICR(troveID_E, price), MCR);
 
         assertLt(troveManager.getTroveEntireDebt(troveIDs.A), MIN_DEBT);
         assertLt(troveManager.getTroveEntireDebt(troveIDs.B), MIN_DEBT);

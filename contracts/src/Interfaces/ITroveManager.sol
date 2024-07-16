@@ -3,6 +3,7 @@
 pragma solidity 0.8.18;
 
 import "./ILiquityBase.sol";
+import "./ITroveNFT.sol";
 import "./IStabilityPool.sol";
 import "./IBoldToken.sol";
 import "./ISortedTroves.sol";
@@ -19,10 +20,7 @@ interface ITroveManager is ILiquityBase {
         unredeemable
     }
 
-    function MCR() external view returns (uint256);
-    function SCR() external view returns (uint256);
-    function LIQUIDATION_PENALTY_SP() external view returns (uint256);
-    function LIQUIDATION_PENALTY_REDISTRIBUTION() external view returns (uint256);
+    function getConstants() external returns (uint256 MCR, uint256 SCR, uint256 LIQUIDATION_PENALTY_SP, uint256 LIQUIDATION_PENALTY_REDISTRIBUTION);
 
     function shutdownTime() external view returns (uint256);
 
@@ -40,10 +38,18 @@ interface ITroveManager is ILiquityBase {
     ) external;
     function setCollateralRegistry(address _collateralRegistryAddress) external;
 
-    function stabilityPool() external view returns (IStabilityPool);
-    function boldToken() external view returns (IBoldToken);
-    function sortedTroves() external view returns (ISortedTroves);
-    function borrowerOperationsAddress() external view returns (address);
+    function getContracts() external view returns (
+        ITroveNFT,
+        address, // borrowerOperationsAddress
+        IActivePool,
+        IDefaultPool,
+        IStabilityPool,
+        address, // gasPoolAddress
+        ISortedTroves,
+        address, // collateralRegistryAddress
+        IBoldToken,
+        IERC20 // WETH
+    );
 
     function Troves(uint256 _id)
         external

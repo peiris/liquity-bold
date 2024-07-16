@@ -35,7 +35,7 @@ contract MultiTroveGetter {
         ITroveManager troveManager = collateralRegistry.getTroveManager(_collIndex);
         require(address(troveManager) != address(0), "Invalid collateral index");
 
-        ISortedTroves sortedTroves = troveManager.sortedTroves();
+        (,,,,,,ISortedTroves sortedTroves,,,) = troveManager.getContracts();
         assert(address(sortedTroves) != address(0));
 
         uint256 startIdx;

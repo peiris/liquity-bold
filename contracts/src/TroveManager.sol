@@ -8,7 +8,6 @@ import "./Interfaces/ICollSurplusPool.sol";
 import "./Interfaces/IBoldToken.sol";
 import "./Interfaces/ISortedTroves.sol";
 import "./Interfaces/ITroveEvents.sol";
-import "./Interfaces/ITroveNFT.sol";
 import "./Dependencies/LiquityBase.sol";
 import "./Dependencies/Ownable.sol";
 
@@ -20,30 +19,30 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
 
     // --- Connected contract declarations ---
 
-    ITroveNFT public troveNFT;
-    address public borrowerOperationsAddress;
-    IStabilityPool public override stabilityPool;
-    address gasPoolAddress;
-    ICollSurplusPool collSurplusPool;
-    IBoldToken public override boldToken;
+    ITroveNFT internal troveNFT;
+    address internal borrowerOperationsAddress;
+    IStabilityPool internal stabilityPool;
+    address internal gasPoolAddress;
+    ICollSurplusPool internal collSurplusPool;
     // A doubly linked list of Troves, sorted by their sorted by their collateral ratios
-    ISortedTroves public sortedTroves;
-    address public collateralRegistryAddress;
+    ISortedTroves internal sortedTroves;
+    address internal collateralRegistryAddress;
+    IBoldToken internal boldToken;
     // Wrapped ETH for liquidation reserve (gas compensation)
-    IERC20 public immutable WETH;
+    IERC20 internal immutable WETH;
 
     // --- Data structures ---
 
     // Minimum collateral ratio for individual troves
-    uint256 public immutable MCR;
+    uint256 internal immutable MCR;
     // Shutdown system collateral ratio. If the system's total collateral ratio (TCR) for a given collateral falls below the SCR,
     // the protocol triggers the shutdown of the borrow market and permanently disables all borrowing operations except for closing Troves.
-    uint256 public immutable SCR;
+    uint256 internal immutable SCR;
 
     // Liquidation penalty for troves offset to the SP
-    uint256 public immutable LIQUIDATION_PENALTY_SP;
+    uint256 internal immutable LIQUIDATION_PENALTY_SP;
     // Liquidation penalty for troves redistributed
-    uint256 public immutable LIQUIDATION_PENALTY_REDISTRIBUTION;
+    uint256 internal immutable LIQUIDATION_PENALTY_REDISTRIBUTION;
 
     // Store the necessary data for a trove
     struct Trove {
@@ -267,6 +266,36 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
     }
 
     // --- Getters ---
+
+    function getContracts() external view returns (
+        ITroveNFT,
+        address, // borrowerOperationsAddress
+        IActivePool,
+        IDefaultPool,
+        IStabilityPool,
+        address, // gasPoolAddress
+        ISortedTroves,
+        address, // collateralRegistryAddress
+        IBoldToken,
+        IERC20 // WETH
+    )  {
+        return (
+            troveNFT,
+            borrowerOperationsAddress,
+            activePool,
+            defaultPool,
+            stabilityPool,
+            gasPoolAddress,
+            sortedTroves,
+            collateralRegistryAddress,
+            boldToken,
+            WETH
+        );
+    }
+
+    function getConstants() external view returns (uint256, uint256, uint256, uint256) {
+        return (MCR, SCR, LIQUIDATION_PENALTY_SP, LIQUIDATION_PENALTY_REDISTRIBUTION);
+    }
 
     function getTroveIdsCount() external view override returns (uint256) {
         return TroveIds.length;

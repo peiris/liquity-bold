@@ -26,40 +26,45 @@ contract Deployment is DevTestSetup {
 
     function testTroveManagerHasCorrectBoldTokenAddress() public {
         address boldTokenAddress = address(boldToken);
-        address recordedBoldTokenAddress = address(troveManager.boldToken());
+        (,,,,,,,,IBoldToken boldToken,) = troveManager.getContracts();
+        address recordedBoldTokenAddress = address(boldToken);
         assertEq(boldTokenAddress, recordedBoldTokenAddress);
     }
 
     function testTroveManagerHasCorrectSortedTrovesAddress() public {
         address sortedTrovesAddress = address(sortedTroves);
-        address recordedSortedTrovesAddress = address(troveManager.sortedTroves());
+        (,,,,,,ISortedTroves sortedTroves,,,) = troveManager.getContracts();
+        address recordedSortedTrovesAddress = address(sortedTroves);
         assertEq(sortedTrovesAddress, recordedSortedTrovesAddress);
     }
 
     function testTroveManagerHasCorrectBorrowerOpsAddress() public {
         address borrowerOperationsAddress = address(borrowerOperations);
-        address recordedBorrowerOperationsAddress = troveManager.borrowerOperationsAddress();
+        (,address recordedBorrowerOperationsAddress,,,,,,,,) = troveManager.getContracts();
         assertEq(borrowerOperationsAddress, recordedBorrowerOperationsAddress);
     }
 
     // ActivePool in TroveM
     function testTroveManagerHasCorrectActivePoolAddress() public {
         address activePoolAddress = address(activePool);
-        address recordedActivePoolAddress = address(troveManager.activePool());
+        (,,IActivePool activePool,,,,,,,) = troveManager.getContracts();
+        address recordedActivePoolAddress = address(activePool);
         assertEq(activePoolAddress, recordedActivePoolAddress);
     }
 
     // DefaultPool in TroveM
     function testTroveManagerHasCorrectDefaultPoolAddress() public {
         address defaultPoolAddress = address(defaultPool);
-        address recordedDefaultPoolAddress = address(troveManager.defaultPool());
+        (,,,IDefaultPool defaultPool,,,,,,) = troveManager.getContracts();
+        address recordedDefaultPoolAddress = address(defaultPool);
         assertEq(defaultPoolAddress, recordedDefaultPoolAddress);
     }
 
     // StabilityPool in TroveM
     function testTroveManagerHasCorrectSPAddress() public {
         address stabilityPoolAddress = address(stabilityPool);
-        address recordedStabilityPoolAddress = address(troveManager.stabilityPool());
+        (,,,,IStabilityPool stabilityPool,,,,,) = troveManager.getContracts();
+        address recordedStabilityPoolAddress = address(stabilityPool);
         assertEq(stabilityPoolAddress, recordedStabilityPoolAddress);
     }
 

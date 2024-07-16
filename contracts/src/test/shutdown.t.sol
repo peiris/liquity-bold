@@ -69,7 +69,7 @@ contract ShutdownTest is DevTestSetup {
         // Set first branch as default
         borrowerOperations = contractsArray[0].borrowerOperations;
         troveManager = contractsArray[0].troveManager;
-        MCR = troveManager.MCR();
+        (MCR, SCR,,) = troveManager.getConstants();
     }
 
     function openMulticollateralTroveNoHints100pctWithIndex(
@@ -508,7 +508,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves and first branch is shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
         assertTrue(borrowerOperations.hasBeenShutDown());
 
@@ -537,7 +537,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves and first branch is shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
         assertTrue(borrowerOperations.hasBeenShutDown());
 
@@ -561,7 +561,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves and first branch is shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
         assertTrue(borrowerOperations.hasBeenShutDown());
 
@@ -597,7 +597,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves and first branch is shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
         assertTrue(borrowerOperations.hasBeenShutDown());
 
@@ -631,7 +631,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves and first branch is shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
         assertTrue(borrowerOperations.hasBeenShutDown());
 
@@ -656,7 +656,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves and first branch is shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
 
         assertTrue(contractsArray[0].borrowerOperations.hasBeenShutDown());
@@ -678,7 +678,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves, branch can be shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
 
         // Random EOA tries to call setShutdownFlag and fails
@@ -699,7 +699,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves and first branch is shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
         assertTrue(borrowerOperations.hasBeenShutDown());
 
@@ -731,7 +731,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves and first branch is shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
         assertTrue(borrowerOperations.hasBeenShutDown());
 
@@ -764,7 +764,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves and first branch is shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
         assertTrue(borrowerOperations.hasBeenShutDown());
 
@@ -801,7 +801,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves and first branch is shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
         assertTrue(borrowerOperations.hasBeenShutDown());
 
@@ -830,7 +830,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves and first branch is shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
         assertTrue(borrowerOperations.hasBeenShutDown());
 
@@ -857,7 +857,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves and first branch is shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
         assertTrue(borrowerOperations.hasBeenShutDown());
 
@@ -898,7 +898,7 @@ contract ShutdownTest is DevTestSetup {
         // Price halves and first branch is shut down
         uint256 price = 1000e18;
         contractsArray[0].priceFeed.setPrice(price);
-        assertLt(troveManager.getTCR(price), troveManager.SCR());
+        assertLt(troveManager.getTCR(price), SCR);
         contractsArray[0].borrowerOperations.shutdown();
         assertTrue(borrowerOperations.hasBeenShutDown());
 

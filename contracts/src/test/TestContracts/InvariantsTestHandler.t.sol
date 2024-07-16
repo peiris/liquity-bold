@@ -301,24 +301,39 @@ contract InvariantsTestHandler is BaseHandler, BaseMultiCollateralTest {
         liqBatchLabels.push(vm.getLabel(owner));
     }
 
+    struct AggregateLiquidationBatchVars {
+        uint256 MCR;
+        uint256 LIQUIDATION_PENALTY_SP;
+        uint256 LIQUIDATION_PENALTY_REDISTRIBUTION;
+        uint256 price;
+        uint256 troveId;
+        uint256 collRemaining;
+        uint256 collGasComp;
+        uint256 debtOffset;
+        uint256 collOffset;
+        uint256 debtRedist;
+        uint256 collRedist;
+    }
+
     function _aggregateLiquidationBatch(uint256 i, LiquidationTotals memory t) internal {
         LiquityContractsDev memory c = branches[i];
-        uint256 MCR = c.troveManager.MCR();
-        uint256 price = c.priceFeed.getPrice();
+        AggregateLiquidationBatchVars memory vars;
+        (vars.MCR,, vars.LIQUIDATION_PENALTY_SP, vars.LIQUIDATION_PENALTY_REDISTRIBUTION) = c.troveManager.getConstants();
+        vars.price = c.priceFeed.getPrice();
 
         for (uint256 j = 0; j < liqBatch.length; ++j) {
-            uint256 troveId = liqBatch[j];
+            vars.troveId = liqBatch[j];
 
-            if (liqBatchHasSeen[troveId]) continue;
-            liqBatchHasSeen[troveId] = true;
+            if (liqBatchHasSeen[vars.troveId]) continue;
+            liqBatchHasSeen[vars.troveId] = true;
 
-            LatestTroveData memory trove = c.troveManager.getLatestTroveData(troveId);
-            if (trove.entireDebt == 0 || trove.entireColl * price / trove.entireDebt >= MCR) continue;
+            LatestTroveData memory trove = c.troveManager.getLatestTroveData(vars.troveId);
+            if (trove.entireDebt == 0 || trove.entireColl * vars.price / trove.entireDebt >= vars.MCR) continue;
 
             liqBatchLiquidatable.push(liqBatch[j]);
             liqBatchLiquidatableLabels.push(liqBatchLabels[j]);
 
-            uint256 collRemaining = trove.entireColl;
+            vars.collRemaining = trove.entireColl;
 
             // Apply pending BOLD debt redist
             t.activeDebtDelta += int256(trove.redistBoldDebtGain);
@@ -329,41 +344,41 @@ contract InvariantsTestHandler is BaseHandler, BaseMultiCollateralTest {
             t.defaultCollDelta -= int256(trove.redistCollGain);
 
             // Coll gas comp
-            uint256 collGasComp = Math.min(trove.entireColl / COLL_GAS_COMPENSATION_DIVISOR, COLL_GAS_COMPENSATION_CAP);
-            t.activeCollDelta -= int256(collGasComp);
-            t.collGasComp += collGasComp;
-            collRemaining -= collGasComp;
+            vars.collGasComp = Math.min(trove.entireColl / COLL_GAS_COMPENSATION_DIVISOR, COLL_GAS_COMPENSATION_CAP);
+            t.activeCollDelta -= int256(vars.collGasComp);
+            t.collGasComp += vars.collGasComp;
+            vars.collRemaining -= vars.collGasComp;
 
             // Offset debt by SP
-            uint256 debtOffset = Math.min(trove.entireDebt, spBoldDeposits[i] - t.spBoldDepositsDecrease);
-            t.activeDebtDelta -= int256(debtOffset);
-            t.spBoldDepositsDecrease += debtOffset;
+            vars.debtOffset = Math.min(trove.entireDebt, spBoldDeposits[i] - t.spBoldDepositsDecrease);
+            t.activeDebtDelta -= int256(vars.debtOffset);
+            t.spBoldDepositsDecrease += vars.debtOffset;
 
             // Send coll to SP
-            uint256 collOffset = Math.min(
-                collRemaining * debtOffset / trove.entireDebt,
-                debtOffset * (_100pct + c.troveManager.LIQUIDATION_PENALTY_SP()) / price
+            vars.collOffset = Math.min(
+                vars.collRemaining * vars.debtOffset / trove.entireDebt,
+                vars.debtOffset * (_100pct + vars.LIQUIDATION_PENALTY_SP) / vars.price
             );
-            t.activeCollDelta -= int256(collOffset);
-            t.spCollIncrease += collOffset;
-            collRemaining -= collOffset;
+            t.activeCollDelta -= int256(vars.collOffset);
+            t.spCollIncrease += vars.collOffset;
+            vars.collRemaining -= vars.collOffset;
 
             // Redistribute debt
-            uint256 debtRedist = trove.entireDebt - debtOffset;
-            t.activeDebtDelta -= int256(debtRedist);
-            t.defaultDebtDelta += int256(debtRedist);
+            vars.debtRedist = trove.entireDebt - vars.debtOffset;
+            t.activeDebtDelta -= int256(vars.debtRedist);
+            t.defaultDebtDelta += int256(vars.debtRedist);
 
             // Redistribute coll
-            uint256 collRedist = Math.min(
-                collRemaining, debtRedist * (_100pct + c.troveManager.LIQUIDATION_PENALTY_REDISTRIBUTION()) / price
+            vars.collRedist = Math.min(
+                vars.collRemaining, vars.debtRedist * (_100pct + vars.LIQUIDATION_PENALTY_REDISTRIBUTION) / vars.price
             );
-            t.activeCollDelta -= int256(collRedist);
-            t.defaultCollDelta += int256(collRedist);
-            collRemaining -= collRedist;
+            t.activeCollDelta -= int256(vars.collRedist);
+            t.defaultCollDelta += int256(vars.collRedist);
+            vars.collRemaining -= vars.collRedist;
 
             // Surplus
-            t.activeCollDelta -= int256(collRemaining);
-            t.collSurplus += collRemaining;
+            t.activeCollDelta -= int256(vars.collRemaining);
+            t.collSurplus += vars.collRemaining;
 
             t.interestAccrualDelta -= int256(trove.weightedRecordedDebt);
         }
@@ -462,11 +477,12 @@ contract InvariantsTestHandler is BaseHandler, BaseMultiCollateralTest {
         try c.borrowerOperations.openTrove(
             msg.sender, OWNER_INDEX, v.coll, borrowed, v.upperHint, v.lowerHint, interestRate, v.upfrontFee
         ) {
+            (uint256 MCR,,,) = c.troveManager.getConstants();
             // Preconditions
             assertFalse(v.wasOpen, "Should have failed as Trove was open");
             assertLeDecimal(interestRate, MAX_ANNUAL_INTEREST_RATE, 18, "Should have failed as interest rate > max");
             assertGeDecimal(v.debt, MIN_DEBT, 18, "Should have failed as debt < min");
-            assertGeDecimal(v.coll * v.price / v.debt, c.troveManager.MCR(), 18, "Should have failed as ICR < MCR");
+            assertGeDecimal(v.coll * v.price / v.debt, MCR, 18, "Should have failed as ICR < MCR");
             assertGeDecimal(c.troveManager.getTCR(v.price), CCR, 18, "Should have failed as TCR < CCR");
 
             // Effects (Trove)
@@ -503,8 +519,9 @@ contract InvariantsTestHandler is BaseHandler, BaseMultiCollateralTest {
             } else if (reason.equals("BorrowerOps: Trove's debt must be greater than minimum")) {
                 assertLtDecimal(v.debt, MIN_DEBT, 18, "Should not have failed as debt >= min");
             } else if (reason.equals("BorrowerOps: An operation that would result in ICR < MCR is not permitted")) {
+                (uint256 MCR,,,) = c.troveManager.getConstants();
                 assertLtDecimal(
-                    v.coll * v.price / v.debt, c.troveManager.MCR(), 18, "Should not have failed as ICR >= MCR"
+                    v.coll * v.price / v.debt, MCR, 18, "Should not have failed as ICR >= MCR"
                 );
             } else if (reason.equals("BorrowerOps: An operation that would result in TCR < CCR is not permitted")) {
                 uint256 totalColl = c.troveManager.getEntireSystemColl();
@@ -596,9 +613,10 @@ contract InvariantsTestHandler is BaseHandler, BaseMultiCollateralTest {
                     newInterestRate, MAX_ANNUAL_INTEREST_RATE, 18, "Should not have failed as interest rate <= max"
                 );
             } else if (reason.equals("BorrowerOps: An operation that would result in ICR < MCR is not permitted")) {
+                (uint256 MCR,,,) = c.troveManager.getConstants();
                 assertLtDecimal(
                     trove.entireColl * price / (trove.entireDebt + upfrontFee),
-                    c.troveManager.MCR(),
+                    MCR,
                     18,
                     "Should not have failed as new ICR >= MCR"
                 );

@@ -32,7 +32,7 @@ contract HintHelpers {
         returns (uint256 hintId, uint256 diff, uint256 latestRandomSeed)
     {
         ITroveManager troveManager = collateralRegistry.getTroveManager(_collIndex);
-        ISortedTroves sortedTroves = troveManager.sortedTroves();
+        (,,,,,,ISortedTroves sortedTroves,,,) = troveManager.getContracts();
 
         uint256 arrayLength = troveManager.getTroveIdsCount();
 
