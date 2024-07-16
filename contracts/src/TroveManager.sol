@@ -2,14 +2,13 @@
 
 pragma solidity 0.8.18;
 
-import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
-
 import "./Interfaces/ITroveManager.sol";
 import "./Interfaces/IStabilityPool.sol";
 import "./Interfaces/ICollSurplusPool.sol";
 import "./Interfaces/IBoldToken.sol";
 import "./Interfaces/ISortedTroves.sol";
 import "./Interfaces/ITroveEvents.sol";
+import "./Interfaces/ITroveNFT.sol";
 import "./Dependencies/LiquityBase.sol";
 import "./Dependencies/Ownable.sol";
 
@@ -21,6 +20,7 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
 
     // --- Connected contract declarations ---
 
+    ITroveNFT public troveNFT;
     address public borrowerOperationsAddress;
     IStabilityPool public override stabilityPool;
     address gasPoolAddress;
@@ -31,7 +31,6 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
     address public collateralRegistryAddress;
     // Wrapped ETH for liquidation reserve (gas compensation)
     IERC20 public immutable WETH;
-    IERC721 public immutable troveNFT;
 
     // --- Data structures ---
 
@@ -190,6 +189,7 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
 
     // --- Events ---
 
+    event TroveNFTAddressChanged(address _newTroveNFTAddress);
     event BorrowerOperationsAddressChanged(address _newBorrowerOperationsAddress);
     event PriceFeedAddressChanged(address _newPriceFeedAddress);
     event BoldTokenAddressChanged(address _newBoldTokenAddress);
@@ -220,13 +220,12 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
         LIQUIDATION_PENALTY_REDISTRIBUTION = _liquidationPenaltyRedistribution;
 
         WETH = _weth;
-
-        troveNFT = new ERC721(NAME, SYMBOL);
     }
 
     // --- Dependency setter ---
 
     function setAddresses(
+        address _troveNFTAddress,
         address _borrowerOperationsAddress,
         address _activePoolAddress,
         address _defaultPoolAddress,
@@ -237,6 +236,7 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
         address _boldTokenAddress,
         address _sortedTrovesAddress
     ) external override onlyOwner {
+        troveNFT = ITroveNFT(_troveNFTAddress);
         borrowerOperationsAddress = _borrowerOperationsAddress;
         activePool = IActivePool(_activePoolAddress);
         defaultPool = IDefaultPool(_defaultPoolAddress);
@@ -247,6 +247,7 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
         boldToken = IBoldToken(_boldTokenAddress);
         sortedTroves = ISortedTroves(_sortedTrovesAddress);
 
+        emit TroveNFTAddressChanged(_troveNFTAddress);
         emit BorrowerOperationsAddressChanged(_borrowerOperationsAddress);
         emit ActivePoolAddressChanged(_activePoolAddress);
         emit DefaultPoolAddressChanged(_defaultPoolAddress);
@@ -1220,7 +1221,7 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
 
         // burn ERC721
         // TODO: Should we do it?
-        //troveNFT.burn(_troveId);
+        troveNFT.burn(_troveId);
     }
 
     /*
@@ -1474,7 +1475,7 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
         totalStakes = newTotalStakes;
 
         // mint ERC721
-        //troveNFT.mint(_owner, _troveId);
+        troveNFT.mint(_owner, _troveId);
 
         _updateTroveRewardSnapshots(_troveId);
 
@@ -1530,7 +1531,7 @@ contract TroveManager is LiquityBase, Ownable, ITroveManager, ITroveEvents {
         totalStakes = newTotalStakes;
 
         // mint ERC721
-        _mint(_owner, _troveId);
+        troveNFT.mint(_owner, _troveId);
 
         uint256 annualInterestRate = batches[_batchAddress].annualInterestRate;
         emit TroveUpdated(

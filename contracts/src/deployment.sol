@@ -13,6 +13,7 @@ import "./MultiTroveGetter.sol";
 import "./SortedTroves.sol";
 import "./StabilityPool.sol";
 import "./test/TestContracts/TroveManagerTester.t.sol";
+import "./TroveNFT.sol";
 import "./CollateralRegistry.sol";
 import "./MockInterestRouter.sol";
 import "./test/TestContracts/PriceFeedTestnet.sol";
@@ -32,6 +33,7 @@ struct LiquityContractsDev {
     ISortedTroves sortedTroves;
     IStabilityPool stabilityPool;
     ITroveManagerTester troveManager; // Tester
+    ITroveNFT troveNFT;
     IPriceFeedTestnet priceFeed; // Tester
     GasPool gasPool;
     IInterestRouter interestRouter;
@@ -46,6 +48,7 @@ struct LiquityContracts {
     ISortedTroves sortedTroves;
     IStabilityPool stabilityPool;
     ITroveManager troveManager;
+    ITroveNFT troveNFT;
     IPriceFeed priceFeed;
     GasPool gasPool;
     IInterestRouter interestRouter;
@@ -310,7 +313,8 @@ function _deployAndConnectCollateralContractsDev(
         troveManagerParams.LIQUIDATION_PENALTY_REDISTRIBUTION,
         _weth
     );
-    contracts.borrowerOperations = new BorrowerOperations(_collToken, contracts.troveManager, _weth);
+    contracts.troveNFT = new TroveNFT(contracts.troveManager);
+    contracts.borrowerOperations = new BorrowerOperations(_collToken, contracts.troveManager, contracts.troveNFT, _weth);
     contracts.collSurplusPool = new CollSurplusPool(address(_collToken));
     contracts.defaultPool = new DefaultPool(address(_collToken));
     contracts.gasPool = new GasPool(_weth, contracts.borrowerOperations, contracts.troveManager);
@@ -358,7 +362,8 @@ function _deployAndConnectCollateralContractsMainnet(
         _troveManagerParams.LIQUIDATION_PENALTY_REDISTRIBUTION,
         _weth
     );
-    contracts.borrowerOperations = new BorrowerOperations(_collateralToken, contracts.troveManager, _weth);
+    contracts.troveNFT = new TroveNFT(contracts.troveManager);
+    contracts.borrowerOperations = new BorrowerOperations(_collateralToken, contracts.troveManager, contracts.troveNFT, _weth);
     contracts.collSurplusPool = new CollSurplusPool(address(_collateralToken));
     contracts.defaultPool = new DefaultPool(address(_collateralToken));
     contracts.gasPool = new GasPool(_weth, contracts.borrowerOperations, contracts.troveManager);
@@ -383,6 +388,7 @@ function connectContracts(IBoldToken _boldToken, LiquityContracts memory contrac
 
     // set contracts in the Trove Manager
     contracts.troveManager.setAddresses(
+        address(contracts.troveNFT),
         address(contracts.borrowerOperations),
         address(contracts.activePool),
         address(contracts.defaultPool),

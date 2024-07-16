@@ -74,4 +74,12 @@ contract TroveManagerTester is ITroveManagerTester, TroveManager {
         uint256 troveOwnersArrayLength = TroveIds.length;
         _removeTroveId(_troveId, troveOwnersArrayLength);
     }
+
+    function ownerOf(uint256 _troveId) external view returns (address) {
+        return troveNFT.ownerOf(_troveId);
+    }
+
+    function balanceOf(address _account) external view returns (uint256) {
+        return troveNFT.balanceOf(_account);
+    }
 }
