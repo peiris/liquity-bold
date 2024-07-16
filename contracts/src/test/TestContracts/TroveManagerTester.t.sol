@@ -12,6 +12,19 @@ for testing the parent's internal functions. */
 contract TroveManagerTester is ITroveManagerTester, TroveManager {
     constructor(ConstructorVars memory _vars) TroveManager(_vars) {}
 
+    function get_MCR() external view returns (uint256) {
+        return MCR;
+    }
+    function get_SCR() external view returns (uint256) {
+        return SCR;
+    }
+    function get_LIQUIDATION_PENALTY_SP() external view returns (uint256) {
+        return LIQUIDATION_PENALTY_SP;
+    }
+    function get_LIQUIDATION_PENALTY_REDISTRIBUTION() external view returns (uint256) {
+        return LIQUIDATION_PENALTY_REDISTRIBUTION;
+    }
+
     function computeICR(uint256 _coll, uint256 _debt, uint256 _price) external pure returns (uint256) {
         return LiquityMath._computeCR(_coll, _debt, _price);
     }

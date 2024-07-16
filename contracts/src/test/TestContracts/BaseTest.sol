@@ -22,6 +22,7 @@ import "forge-std/console2.sol";
 
 contract BaseTest is TestAccounts {
     uint256 MCR;
+    uint256 SCR;
     uint256 LIQUIDATION_PENALTY_SP;
     uint256 LIQUIDATION_PENALTY_REDISTRIBUTION;
 

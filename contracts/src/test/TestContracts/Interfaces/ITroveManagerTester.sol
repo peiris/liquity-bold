@@ -5,6 +5,11 @@ pragma solidity 0.8.18;
 import "../../../Interfaces/ITroveManager.sol";
 
 interface ITroveManagerTester is ITroveManager {
+    function get_MCR() external view returns (uint256);
+    function get_SCR() external view returns (uint256);
+    function get_LIQUIDATION_PENALTY_SP() external view returns (uint256);
+    function get_LIQUIDATION_PENALTY_REDISTRIBUTION() external view returns (uint256);
+
     function computeICR(uint256 _coll, uint256 _debt, uint256 _price) external pure returns (uint256);
     function getCollGasCompensation(uint256 _coll) external pure returns (uint256);
 

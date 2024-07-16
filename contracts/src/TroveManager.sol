@@ -15,35 +15,32 @@ import "./Dependencies/LiquityBase.sol";
 // import "forge-std/console2.sol";
 
 contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
-    string public constant NAME = "TroveManager"; // TODO
-    string public constant SYMBOL = "Lv2T"; // TODO
-
     // --- Connected contract declarations ---
 
-    ITroveNFT public troveNFT;
+    ITroveNFT internal troveNFT;
     IBorrowerOperations public borrowerOperations;
-    IStabilityPool public override stabilityPool;
-    address gasPoolAddress;
-    ICollSurplusPool collSurplusPool;
-    IBoldToken public override boldToken;
+    IStabilityPool public stabilityPool;
+    address internal gasPoolAddress;
+    ICollSurplusPool internal collSurplusPool;
+    IBoldToken internal boldToken;
     // A doubly linked list of Troves, sorted by their sorted by their collateral ratios
     ISortedTroves public sortedTroves;
-    ICollateralRegistry public collateralRegistry;
+    ICollateralRegistry internal collateralRegistry;
     // Wrapped ETH for liquidation reserve (gas compensation)
-    IERC20 public immutable WETH;
+    IERC20 internal immutable WETH;
 
     // --- Data structures ---
 
     // Minimum collateral ratio for individual troves
-    uint256 public immutable MCR;
+    uint256 internal immutable MCR;
     // Shutdown system collateral ratio. If the system's total collateral ratio (TCR) for a given collateral falls below the SCR,
     // the protocol triggers the shutdown of the borrow market and permanently disables all borrowing operations except for closing Troves.
-    uint256 public immutable SCR;
+    uint256 internal immutable SCR;
 
     // Liquidation penalty for troves offset to the SP
-    uint256 public immutable LIQUIDATION_PENALTY_SP;
+    uint256 internal immutable LIQUIDATION_PENALTY_SP;
     // Liquidation penalty for troves redistributed
-    uint256 public immutable LIQUIDATION_PENALTY_REDISTRIBUTION;
+    uint256 internal immutable LIQUIDATION_PENALTY_REDISTRIBUTION;
 
     // Store the necessary data for a trove
     struct Trove {
@@ -75,15 +72,15 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         uint256 totalDebtShares;
     }
 
-    mapping(address => Batch) public batches;
+    mapping(address => Batch) internal batches;
 
-    uint256 public totalStakes;
+    uint256 internal totalStakes;
 
     // Snapshot of the value of totalStakes, taken immediately after the latest liquidation
-    uint256 public totalStakesSnapshot;
+    uint256 internal totalStakesSnapshot;
 
     // Snapshot of the total collateral across the ActivePool and DefaultPool, immediately after the latest liquidation.
-    uint256 public totalCollateralSnapshot;
+    uint256 internal totalCollateralSnapshot;
 
     /*
     * L_coll and L_boldDebt track the sums of accumulated liquidation rewards per unit staked. During its lifetime, each stake earns:
@@ -93,8 +90,8 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     *
     * Where L_coll(0) and L_boldDebt(0) are snapshots of L_coll and L_boldDebt for the active Trove taken at the instant the stake was made
     */
-    uint256 public L_coll;
-    uint256 public L_boldDebt;
+    uint256 internal L_coll;
+    uint256 internal L_boldDebt;
 
     // Map active troves to their RewardSnapshot
     mapping(uint256 => RewardSnapshot) public rewardSnapshots;
@@ -106,13 +103,13 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     }
 
     // Array of all active trove addresses - used to compute an approximate hint off-chain, for the sorted list insertion
-    uint256[] public TroveIds;
+    uint256[] internal TroveIds;
     // Array of all batch managers - used to fetch them off-chain
     address[] public batchIds;
 
     // Error trackers for the trove redistribution calculation
-    uint256 public lastCollError_Redistribution;
-    uint256 public lastBoldDebtError_Redistribution;
+    uint256 internal lastCollError_Redistribution;
+    uint256 internal lastBoldDebtError_Redistribution;
 
     // Timestamp at which branch was shut down. 0 if not shut down.
     uint256 public shutdownTime;

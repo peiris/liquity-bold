@@ -163,7 +163,7 @@ contract SPInvariantsTestHandler is BaseHandler {
         uint256 accountSurplusBefore = collSurplusPool.getCollateral(msg.sender);
         uint256 collCompensation = TroveManagerTester(address(troveManager)).getCollGasCompensation(coll);
         // Calc claimable coll based on the remaining coll to liquidate, less the liq. penalty that goes to the SP depositors
-        uint256 seizedColl = debt * (_100pct + troveManager.LIQUIDATION_PENALTY_SP()) / priceFeed.getPrice();
+        uint256 seizedColl = debt * (_100pct + TroveManagerTester(address(troveManager)).get_LIQUIDATION_PENALTY_SP()) / priceFeed.getPrice();
         // The Trove owner bears the gas compensation costs
         uint256 claimableColl = coll - seizedColl - collCompensation;
 

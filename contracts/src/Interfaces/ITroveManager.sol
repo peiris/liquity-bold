@@ -19,15 +19,10 @@ interface ITroveManager is ILiquityBase {
         unredeemable
     }
 
-    function MCR() external view returns (uint256);
-    function SCR() external view returns (uint256);
-    function LIQUIDATION_PENALTY_SP() external view returns (uint256);
-    function LIQUIDATION_PENALTY_REDISTRIBUTION() external view returns (uint256);
-
     function shutdownTime() external view returns (uint256);
 
     function stabilityPool() external view returns (IStabilityPool);
-    function boldToken() external view returns (IBoldToken);
+    //function boldToken() external view returns (IBoldToken);
     function sortedTroves() external view returns (ISortedTroves);
     function borrowerOperations() external view returns (IBorrowerOperations);
 
