@@ -184,6 +184,17 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         LatestBatchData batch;
     }
 
+    // --- Errors ---
+
+    error EmptyData();
+    error NothingToLiquidate();
+    error CallerNotBorrowerOperations();
+    error CallerNotCollateralRegistry();
+    error TroveNotOpen(uint256 _troveId);
+    error OnlyOneTroveLeft();
+    error NotShutDown();
+    error MinCollNotReached(uint256 _coll);
+
     // --- Events ---
 
     event TroveNFTAddressChanged(address _newTroveNFTAddress);
@@ -443,7 +454,9 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
      * Attempt to liquidate a custom list of troves provided by the caller.
      */
     function batchLiquidateTroves(uint256[] memory _troveArray) public override {
-        require(_troveArray.length != 0, "TroveManager: Calldata address array must not be empty");
+        if (_troveArray.length == 0) {
+            revert EmptyData();
+        }
 
         IActivePool activePoolCached = activePool;
         IDefaultPool defaultPoolCached = defaultPool;
@@ -457,7 +470,9 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         // Perform the appropriate liquidation sequence - tally values and obtain their totals.
         _batchLiquidateTroves(defaultPoolCached, price, boldInStabPool, _troveArray, totals);
 
-        require(totals.troveChange.debtDecrease > 0, "TroveManager: nothing to liquidate");
+        if (totals.troveChange.debtDecrease == 0) {
+            revert NothingToLiquidate();
+        }
 
         activePool.mintAggInterestAndAccountForTroveChange(totals.troveChange, address(0));
 
@@ -862,7 +877,9 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
             remainingBold -= singleRedemption.boldLot;
         }
 
-        require(totals.troveChange.collDecrease >= _minCollateral, "TM: Min collateral not reached");
+        if (totals.troveChange.collDecrease < _minCollateral) {
+            revert MinCollNotReached(totals.troveChange.collDecrease);
+        }
 
         emit Redemption(_boldAmount, totals.troveChange.debtDecrease, totals.troveChange.collDecrease, 0, price);
 
@@ -1208,23 +1225,33 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     // --- 'require' wrapper functions ---
 
     function _requireCallerIsBorrowerOperations() internal view {
-        require(msg.sender == address(borrowerOperations), "TroveManager: Caller is not the BorrowerOperations contract");
+        if (msg.sender != address(borrowerOperations)) {
+            revert CallerNotBorrowerOperations();
+        }
     }
 
     function _requireCallerIsCollateralRegistry() internal view {
-        require(msg.sender == address(collateralRegistry), "TroveManager: Caller is not the CollateralRegistry contract");
+        if (msg.sender != address(collateralRegistry)) {
+            revert CallerNotCollateralRegistry();
+        }
     }
 
     function _requireTroveIsOpen(uint256 _troveId) internal view {
-        require(checkTroveIsOpen(_troveId), "TroveManager: Trove does not exist or is closed");
+        if(!checkTroveIsOpen(_troveId)) {
+            revert TroveNotOpen(_troveId);
+        }
     }
 
-    function _requireMoreThanOneTroveInSystem(uint256 TroveIdsArrayLength) internal view {
-        require(TroveIdsArrayLength > 1 && sortedTroves.getSize() > 1, "TroveManager: Only one trove in the system");
+    function _requireMoreThanOneTroveInSystem(uint256 TroveIdsArrayLength) internal pure {
+        if(TroveIdsArrayLength == 1) {
+            revert OnlyOneTroveLeft();
+        }
     }
 
     function _requireIsShutDown() internal view {
-        require(shutdownTime > 0, "TroveManager: Branch is not shut down");
+        if (shutdownTime == 0) {
+            revert NotShutDown();
+        }
     }
 
     // --- Trove property getters ---
