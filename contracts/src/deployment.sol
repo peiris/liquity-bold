@@ -23,7 +23,7 @@ import "./PriceFeeds/WETHPriceFeed.sol";
 import "./PriceFeeds/WSTETHPriceFeed.sol";
 import "./PriceFeeds/CompositePriceFeed.sol";
 
-// import "forge-std/console.sol";
+// import "forge-std/console2.sol";
 
 struct LiquityContractsDev {
     IActivePool activePool;
@@ -154,7 +154,7 @@ function _deployAndConnectContractsMultiColl(TroveManagerParams[] memory troveMa
 
     // Deploy the first branch with WETH collateral
     LiquityContractsDev memory contracts;
-    vars.collaterals[0] = contracts.collToken;
+    vars.collaterals[0] = WETH;
     for (uint256 i = 1; i < vars.numCollaterals; i++) {
         IERC20 collToken = new ERC20Faucet(
             string.concat("Staked ETH", string(abi.encode(i))), // _name
@@ -308,12 +308,12 @@ function _deployAndConnectCollateralContractsDev(
 
     // Deploy all contracts, using testers for TM and PriceFeed
     contracts.activePool = new ActivePool(address(_collToken));
-    contracts.troveNFT = new TroveNFT(contracts.troveManager);
+    contracts.troveNFT = new TroveNFT();
     contracts.borrowerOperations =
         new BorrowerOperations(_troveManagerParams.MCR, _troveManagerParams.SCR, _collToken, contracts.troveNFT, _weth);
     contracts.collSurplusPool = new CollSurplusPool(address(_collToken));
     contracts.defaultPool = new DefaultPool(address(_collToken));
-    contracts.gasPool = new GasPool(_weth, contracts.borrowerOperations, contracts.troveManager);
+    contracts.gasPool = new GasPool();
     contracts.priceFeed = new PriceFeedTestnet();
     contracts.sortedTroves = new SortedTroves();
     contracts.stabilityPool = new StabilityPool(address(_collToken));
@@ -337,7 +337,7 @@ function _deployAndConnectCollateralContractsDev(
     contracts.troveManager = new TroveManagerTester(vars);
 
     // Pass the bare contract interfaces to the connector func
-    connectContracts(_branch, _boldToken, _collateralRegistry, contracts);
+    connectContracts(_branch, _boldToken, _weth, _collateralRegistry, contracts);
 
     // Hacky: copy the contracts to a new ContractsDev struct which has the right types for the tester contracts TM and PriceFeed.
     // This should very probably be refactored.
@@ -363,13 +363,13 @@ function _deployAndConnectCollateralContractsMainnet(
     IERC20 _weth
 ) returns (LiquityContracts memory contracts) {
     contracts.activePool = new ActivePool(address(_collateralToken));
-    contracts.troveNFT = new TroveNFT(contracts.troveManager);
+    contracts.troveNFT = new TroveNFT();
     contracts.borrowerOperations = new BorrowerOperations(
         _troveManagerParams.MCR, _troveManagerParams.SCR, _collateralToken, contracts.troveNFT, _weth
     );
     contracts.collSurplusPool = new CollSurplusPool(address(_collateralToken));
     contracts.defaultPool = new DefaultPool(address(_collateralToken));
-    contracts.gasPool = new GasPool(_weth, contracts.borrowerOperations, contracts.troveManager);
+    contracts.gasPool = new GasPool();
     contracts.priceFeed = _priceFeed;
     contracts.sortedTroves = new SortedTroves();
     contracts.stabilityPool = new StabilityPool(address(_collateralToken));
@@ -392,12 +392,13 @@ function _deployAndConnectCollateralContractsMainnet(
     });
     contracts.troveManager = new TroveManager(vars);
 
-    connectContracts(_branch, _boldToken, _collateralRegistry, contracts);
+    connectContracts(_branch, _boldToken, _weth, _collateralRegistry, contracts);
 }
 
 function connectContracts(
     uint256 _branch,
     IBoldToken _boldToken,
+    IERC20 _weth,
     ICollateralRegistry _collateralRegistry,
     LiquityContracts memory contracts
 ) {
@@ -446,7 +447,11 @@ function connectContracts(
 
     contracts.defaultPool.setAddresses(address(contracts.troveManager), address(contracts.activePool));
 
+    contracts.gasPool.setAllowance(_weth, contracts.borrowerOperations, contracts.troveManager);
+
     contracts.collSurplusPool.setAddresses(
         address(contracts.borrowerOperations), address(contracts.troveManager), address(contracts.activePool)
     );
+
+    contracts.troveNFT.setAddresses(contracts.troveManager);
 }

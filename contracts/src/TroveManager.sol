@@ -160,7 +160,6 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         IBoldToken boldToken;
         ISortedTroves sortedTroves;
         ICollSurplusPool collSurplusPool;
-        address gasPoolAddress;
     }
 
     // --- Variable container structs for redemptions ---
@@ -745,7 +744,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         _requireCallerIsCollateralRegistry();
 
         ContractsCache memory contractsCache =
-            ContractsCache(activePool, defaultPool, boldToken, sortedTroves, collSurplusPool, gasPoolAddress);
+            ContractsCache(activePool, defaultPool, boldToken, sortedTroves, collSurplusPool);
         RedemptionTotals memory totals;
 
         uint256 remainingBold = _boldamount;
@@ -855,7 +854,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         _requireIsShutDown();
 
         ContractsCache memory contractsCache =
-            ContractsCache(activePool, defaultPool, boldToken, sortedTroves, collSurplusPool, gasPoolAddress);
+            ContractsCache(activePool, defaultPool, boldToken, sortedTroves, collSurplusPool);
         RedemptionTotals memory totals;
 
         uint256 price = priceFeed.fetchPrice();

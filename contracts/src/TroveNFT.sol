@@ -4,17 +4,23 @@ pragma solidity 0.8.18;
 
 import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 
-import "./Interfaces/ITroveManager.sol";
+import "./Dependencies/Ownable.sol";
 import "./Interfaces/ITroveNFT.sol";
 
-contract TroveNFT is ERC721, ITroveNFT {
-    string public constant NAME = "TroveNFT"; // TODO
-    string public constant SYMBOL = "Lv2T"; // TODO
+// import "forge-std/console2.sol";
 
-    ITroveManager public immutable troveManager;
+contract TroveNFT is Ownable, ERC721, ITroveNFT {
+    string internal constant NAME = "TroveNFT"; // TODO
+    string internal constant SYMBOL = "Lv2T"; // TODO
 
-    constructor(ITroveManager _troveManager) ERC721(NAME, SYMBOL) {
+    ITroveManager public troveManager;
+
+    constructor() ERC721(NAME, SYMBOL) {}
+
+    function setAddresses(ITroveManager _troveManager) external override onlyOwner {
         troveManager = _troveManager;
+
+        _renounceOwnership();
     }
 
     function mint(address _owner, uint256 _troveId) external override {

@@ -143,6 +143,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     error InvalidSCR();
     error IsShutDown();
     error NotShutDown();
+    error TCRNotBelowSCR();
     error NotBorrower();
     error ZeroAdjustment();
     error NotOwnerNorAddManager();
@@ -156,7 +157,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     error TroveNotActive();
     error TroveRedeemable();
     error TroveOpen();
-    error FeeTooHigh();
+    error UpfrontFeeTooHigh();
     error BelowCriticalThreshold();
     error BorrowingNotPermittedBelowCT();
     error ICRBelowMCR();
@@ -168,9 +169,10 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     error NotEnoughBoldBalance();
     error InterestRateTooLow();
     error InterestRateTooHigh();
-    error InvalidBatchInterestRate();
+    error InvalidInterestBatchManager();
     error BatchManagerExists();
     error BatchManagerNotNew();
+    error NewFeeNotLower();
     error CallerNotPriceFeed();
 
     event TroveManagerAddressChanged(address _newTroveManagerAddress);
@@ -186,8 +188,8 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     event ShutDownFromOracleFailure(address _oracleAddress);
 
     constructor(uint256 _mcr, uint256 _scr, IERC20 _collToken, ITroveNFT _troveNFT, IERC20 _weth) {
-        if (_mcr > 1e18 && _mcr < 2e18) revert InvalidMCR();
-        if (_scr > 1e18 && _scr < 2e18) revert InvalidSCR();
+        if (_mcr <= 1e18 || _mcr >= 2e18) revert InvalidMCR();
+        if (_scr <= 1e18 || _scr >= 2e18) revert InvalidSCR();
 
         collToken = _collToken;
         troveNFT = _troveNFT;
@@ -856,7 +858,9 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
         _requireValidInterestBatchManager(msg.sender);
         ContractsCacheTMAP memory contractsCache = ContractsCacheTMAP(troveManager, activePool);
         LatestBatchData memory batch = contractsCache.troveManager.getLatestBatchData(msg.sender);
-        require(_newAnnualManagementFee < batch.annualManagementFee, "BO: New fee should be lower");
+        if (_newAnnualManagementFee >= batch.annualManagementFee) {
+            revert NewFeeNotLower();
+        }
 
         // Lower batch fee on TM
         contractsCache.troveManager.onLowerBatchManagerAnnualFee(
@@ -1151,14 +1155,14 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     }
 
     function shutdown() external {
-        require(!hasBeenShutDown, "BO: already shutdown");
+        if (hasBeenShutDown) revert IsShutDown();
 
         uint256 totalColl = getEntireSystemColl();
         uint256 totalDebt = getEntireSystemDebt();
         uint256 price = priceFeed.fetchPrice();
 
         uint256 TCR = LiquityMath._computeCR(totalColl, totalDebt, price);
-        require(TCR < SCR, "BO: TCR is not below SCR");
+        if (TCR >= SCR) revert TCRNotBelowSCR();
 
         _applyShutdown();
 
@@ -1332,7 +1336,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
 
     function _requireUserAcceptsUpfrontFee(uint256 _fee, uint256 _maxFee) internal pure {
         if (_fee > _maxFee) {
-            revert FeeTooHigh();
+            revert UpfrontFeeTooHigh();
         }
     }
 
@@ -1433,7 +1437,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
 
     function _requireValidInterestBatchManager(address _interestBatchManagerAddress) internal view {
         if (interestBatchManagers[_interestBatchManagerAddress].maxInterestRate == 0) {
-            revert InvalidBatchInterestRate();
+            revert InvalidInterestBatchManager();
         }
     }
 
