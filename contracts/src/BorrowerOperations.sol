@@ -20,22 +20,18 @@ import "./Types/LatestBatchData.sol";
 contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     using SafeERC20 for IERC20;
 
-    string public constant NAME = "BorrowerOperations";
-
-    uint256 public constant SECONDS_IN_ONE_YEAR = 31536000; // 60 * 60 * 24 * 365,
-
     // --- Connected contract declarations ---
 
-    IERC20 public immutable collToken;
-    ITroveNFT public immutable troveNFT;
+    IERC20 internal immutable collToken;
+    ITroveNFT internal immutable troveNFT;
     ITroveManager public troveManager;
-    address gasPoolAddress;
-    ICollSurplusPool collSurplusPool;
-    IBoldToken public boldToken;
+    address internal gasPoolAddress;
+    ICollSurplusPool internal collSurplusPool;
+    IBoldToken internal boldToken;
     // A doubly linked list of Troves, sorted by their collateral ratios
     ISortedTroves public sortedTroves;
     // Wrapped ETH for liquidation reserve (gas compensation)
-    IERC20 public immutable WETH;
+    IERC20 internal immutable WETH;
 
     // Shutdown system collateral ratio. If the system's total collateral ratio (TCR) for a given collateral falls below the SCR,
     // the protocol triggers the shutdown of the borrow market and permanently disables all borrowing operations except for closing Troves.
