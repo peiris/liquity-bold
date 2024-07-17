@@ -7,7 +7,6 @@ import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import "./Interfaces/ITroveManager.sol";
 import "./Interfaces/ITroveNFT.sol";
 
-
 contract TroveNFT is ERC721, ITroveNFT {
     string public constant NAME = "TroveNFT"; // TODO
     string public constant SYMBOL = "Lv2T"; // TODO

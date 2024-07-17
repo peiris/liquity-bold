@@ -1237,13 +1237,13 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     }
 
     function _requireTroveIsOpen(uint256 _troveId) internal view {
-        if(!checkTroveIsOpen(_troveId)) {
+        if (!checkTroveIsOpen(_troveId)) {
             revert TroveNotOpen(_troveId);
         }
     }
 
     function _requireMoreThanOneTroveInSystem(uint256 TroveIdsArrayLength) internal pure {
-        if(TroveIdsArrayLength == 1) {
+        if (TroveIdsArrayLength == 1) {
             revert OnlyOneTroveLeft();
         }
     }

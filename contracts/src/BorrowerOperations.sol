@@ -186,8 +186,8 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     event ShutDownFromOracleFailure(address _oracleAddress);
 
     constructor(uint256 _mcr, uint256 _scr, IERC20 _collToken, ITroveNFT _troveNFT, IERC20 _weth) {
-        if (_mcr > 1e18 && _mcr < 2e18) { revert InvalidMCR(); }
-        if (_scr > 1e18 && _scr < 2e18) { revert InvalidSCR(); }
+        if (_mcr > 1e18 && _mcr < 2e18) revert InvalidMCR();
+        if (_scr > 1e18 && _scr < 2e18) revert InvalidSCR();
 
         collToken = _collToken;
         troveNFT = _troveNFT;
@@ -1232,7 +1232,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     }
 
     function _requireCallerIsBorrower(uint256 _troveId) internal view {
-        if(msg.sender != troveNFT.ownerOf(_troveId)) {
+        if (msg.sender != troveNFT.ownerOf(_troveId)) {
             revert NotBorrower();
         }
     }
@@ -1240,7 +1240,8 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     function _requireNonZeroAdjustment(TroveChange memory _troveChange) internal pure {
         if (
             _troveChange.collIncrease == 0 && _troveChange.collDecrease == 0 && _troveChange.debtIncrease == 0
-            && _troveChange.debtDecrease == 0 ) {
+                && _troveChange.debtDecrease == 0
+        ) {
             revert ZeroAdjustment();
         }
     }
@@ -1300,9 +1301,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
         uint256 _lastInterestRateAdjTime
     ) internal view {
         InterestBatchManager memory interestBatchManager = interestBatchManagers[_interestBatchManagerAddress];
-        if (
-            block.timestamp < _lastInterestRateAdjTime + uint256(interestBatchManager.minInterestRateChangePeriod)
-        ) {
+        if (block.timestamp < _lastInterestRateAdjTime + uint256(interestBatchManager.minInterestRateChangePeriod)) {
             revert BatchInterestRateChangePeriodNotPassed();
         }
     }
@@ -1385,9 +1384,7 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
     }
 
     function _requireDebtRepaymentGeCollWithdrawal(TroveChange memory _troveChange, uint256 _price) internal pure {
-        if (
-            (_troveChange.debtDecrease < _troveChange.collDecrease * _price / DECIMAL_PRECISION)
-        ) {
+        if ((_troveChange.debtDecrease < _troveChange.collDecrease * _price / DECIMAL_PRECISION)) {
             revert RepaymentNotMatchingCollWithdrawal();
         }
     }
@@ -1457,8 +1454,8 @@ contract BorrowerOperations is LiquityBase, Ownable, IBorrowerOperations {
 
     function _requireCallerIsPriceFeed() internal view {
         if (msg.sender != address(priceFeed)) {
-        revert CallerNotPriceFeed();
-}
+            revert CallerNotPriceFeed();
+        }
     }
 
     // --- ICR and TCR getters ---

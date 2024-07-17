@@ -15,12 +15,15 @@ contract TroveManagerTester is ITroveManagerTester, TroveManager {
     function get_MCR() external view returns (uint256) {
         return MCR;
     }
+
     function get_SCR() external view returns (uint256) {
         return SCR;
     }
+
     function get_LIQUIDATION_PENALTY_SP() external view returns (uint256) {
         return LIQUIDATION_PENALTY_SP;
     }
+
     function get_LIQUIDATION_PENALTY_REDISTRIBUTION() external view returns (uint256) {
         return LIQUIDATION_PENALTY_REDISTRIBUTION;
     }
@@ -73,8 +76,7 @@ contract TroveManagerTester is ITroveManagerTester, TroveManager {
     }
 
     function getEffectiveRedemptionFeeInColl(uint256 _redeemAmount, uint256 _price) external view returns (uint256) {
-        return collateralRegistry.getEffectiveRedemptionFeeInBold(_redeemAmount)
-            * DECIMAL_PRECISION / _price;
+        return collateralRegistry.getEffectiveRedemptionFeeInBold(_redeemAmount) * DECIMAL_PRECISION / _price;
     }
 
     function callInternalRemoveTroveId(uint256 _troveId) external {
@@ -154,6 +156,7 @@ contract TroveManagerTester is ITroveManagerTester, TroveManager {
         }
         return trove.debt;
     }
+
     function getTroveWeightedRecordedDebt(uint256 _troveId) external view returns (uint256) {
         Trove memory trove = Troves[_troveId];
         address batchAddress = _getBatchManager(trove);

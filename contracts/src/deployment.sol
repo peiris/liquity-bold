@@ -152,7 +152,6 @@ function _deployAndConnectContractsMultiColl(TroveManagerParams[] memory troveMa
     contractsArray = new LiquityContractsDev[](vars.numCollaterals);
     vars.collaterals = new IERC20[](vars.numCollaterals);
 
-
     // Deploy the first branch with WETH collateral
     LiquityContractsDev memory contracts;
     vars.collaterals[0] = contracts.collToken;
@@ -168,12 +167,16 @@ function _deployAndConnectContractsMultiColl(TroveManagerParams[] memory troveMa
 
     collateralRegistry = new CollateralRegistry(boldToken, vars.collaterals);
 
-    contracts = _deployAndConnectCollateralContractsDev(0, WETH, boldToken, collateralRegistry, WETH, troveManagerParamsArray[0]);
+    contracts = _deployAndConnectCollateralContractsDev(
+        0, WETH, boldToken, collateralRegistry, WETH, troveManagerParamsArray[0]
+    );
     contractsArray[0] = contracts;
 
     // Deploy the remaining branches with LST collateral
     for (uint256 i = 1; i < vars.numCollaterals; i++) {
-        contracts = _deployAndConnectCollateralContractsDev(i, vars.collaterals[i], boldToken, collateralRegistry, WETH, troveManagerParamsArray[i]);
+        contracts = _deployAndConnectCollateralContractsDev(
+            i, vars.collaterals[i], boldToken, collateralRegistry, WETH, troveManagerParamsArray[i]
+        );
         contractsArray[i] = contracts;
     }
 
@@ -277,7 +280,13 @@ function deployAndConnectContractsMainnet(
     // Deploy each set of core contracts
     for (uint256 i = 0; i < numCollaterals; i++) {
         contractsArray[i] = _deployAndConnectCollateralContractsMainnet(
-            i, collaterals[i], boldToken, collateralRegistry, priceFeeds[i], troveManagerParamsArray[i], mockCollaterals.WETH
+            i,
+            collaterals[i],
+            boldToken,
+            collateralRegistry,
+            priceFeeds[i],
+            troveManagerParamsArray[i],
+            mockCollaterals.WETH
         );
     }
 
@@ -300,7 +309,8 @@ function _deployAndConnectCollateralContractsDev(
     // Deploy all contracts, using testers for TM and PriceFeed
     contracts.activePool = new ActivePool(address(_collToken));
     contracts.troveNFT = new TroveNFT(contracts.troveManager);
-    contracts.borrowerOperations = new BorrowerOperations(_troveManagerParams.MCR, _troveManagerParams.SCR, _collToken, contracts.troveNFT, _weth);
+    contracts.borrowerOperations =
+        new BorrowerOperations(_troveManagerParams.MCR, _troveManagerParams.SCR, _collToken, contracts.troveNFT, _weth);
     contracts.collSurplusPool = new CollSurplusPool(address(_collToken));
     contracts.defaultPool = new DefaultPool(address(_collToken));
     contracts.gasPool = new GasPool(_weth, contracts.borrowerOperations, contracts.troveManager);
@@ -323,7 +333,7 @@ function _deployAndConnectCollateralContractsDev(
         sortedTroves: contracts.sortedTroves,
         weth: _weth,
         collateralRegistry: _collateralRegistry
-        });
+    });
     contracts.troveManager = new TroveManagerTester(vars);
 
     // Pass the bare contract interfaces to the connector func
@@ -354,7 +364,9 @@ function _deployAndConnectCollateralContractsMainnet(
 ) returns (LiquityContracts memory contracts) {
     contracts.activePool = new ActivePool(address(_collateralToken));
     contracts.troveNFT = new TroveNFT(contracts.troveManager);
-    contracts.borrowerOperations = new BorrowerOperations(_troveManagerParams.MCR, _troveManagerParams.SCR, _collateralToken, contracts.troveNFT, _weth);
+    contracts.borrowerOperations = new BorrowerOperations(
+        _troveManagerParams.MCR, _troveManagerParams.SCR, _collateralToken, contracts.troveNFT, _weth
+    );
     contracts.collSurplusPool = new CollSurplusPool(address(_collateralToken));
     contracts.defaultPool = new DefaultPool(address(_collateralToken));
     contracts.gasPool = new GasPool(_weth, contracts.borrowerOperations, contracts.troveManager);
@@ -377,13 +389,18 @@ function _deployAndConnectCollateralContractsMainnet(
         sortedTroves: contracts.sortedTroves,
         weth: _weth,
         collateralRegistry: _collateralRegistry
-        });
+    });
     contracts.troveManager = new TroveManager(vars);
 
     connectContracts(_branch, _boldToken, _collateralRegistry, contracts);
 }
 
-function connectContracts(uint256 _branch, IBoldToken _boldToken, ICollateralRegistry _collateralRegistry, LiquityContracts memory contracts) {
+function connectContracts(
+    uint256 _branch,
+    IBoldToken _boldToken,
+    ICollateralRegistry _collateralRegistry,
+    LiquityContracts memory contracts
+) {
     // Connect contracts
     _boldToken.setBranchAddresses(
         address(contracts.troveManager),
