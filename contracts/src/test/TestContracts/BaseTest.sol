@@ -34,6 +34,7 @@ contract BaseTest is TestAccounts {
     ISortedTroves sortedTroves;
     IStabilityPool stabilityPool;
     ITroveManagerTester troveManager;
+    ITroveNFT troveNFT;
     IBoldToken boldToken;
     ICollateralRegistry collateralRegistry;
     IPriceFeedTestnet priceFeed;
@@ -418,17 +419,21 @@ contract BaseTest is TestAccounts {
             );
         }
 
+        IBorrowerOperations.OpenTroveAndJoinInterestBatchManagerParams memory params = IBorrowerOperations.OpenTroveAndJoinInterestBatchManagerParams({
+            owner: _troveOwner,
+            ownerIndex: 0,
+            collAmount: _coll,
+            boldAmount: _debt,
+            upperHint: 0,
+            lowerHint: 0,
+            interestBatchManager: _batchAddress,
+            maxUpfrontFee: 1e24,
+            addManager: address(0),
+            removeManager: address(0),
+            receiver: address(0)
+            });
         vm.startPrank(_troveOwner);
-        uint256 troveId = borrowerOperations.openTroveAndJoinInterestBatchManager(
-            _troveOwner,
-            0,
-            _coll,
-            _debt,
-            0, // _upperHint
-            0, // _lowerHint
-            _batchAddress,
-            1e24
-        );
+        uint256 troveId = borrowerOperations.openTroveAndJoinInterestBatchManager(params);
         vm.stopPrank();
 
         return troveId;

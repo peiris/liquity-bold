@@ -2,10 +2,10 @@
 
 pragma solidity 0.8.18;
 
-import "./ITroveManager.sol";
+import "./ITroveNFT.sol";
 
 interface IAddRemoveManagers {
-    function troveManager() external view returns (ITroveManager);
+    function troveNFT() external view returns (ITroveNFT);
 
     function setAddManager(uint256 _troveId, address _manager) external;
     function setRemoveManager(uint256 _troveId, address _manager) external;

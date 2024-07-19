@@ -7,18 +7,20 @@ import "../Interfaces/IWETH.sol";
 import "../Dependencies/AddRemoveManagers.sol";
 import "../Dependencies/Constants.sol";
 
+import "forge-std/console2.sol";
+
 contract GasCompZapper is AddRemoveManagers {
     using SafeERC20 for IERC20;
 
     IBorrowerOperations public immutable borrowerOperations; // LST branch (i.e., not WETH as collateral)
+    ITroveManager public immutable troveManager;
     IWETH public immutable WETH;
     IERC20 public immutable collToken;
     IBoldToken public immutable boldToken;
 
-    constructor(ITroveManager _troveManager) AddRemoveManagers(_troveManager) {
-        IBorrowerOperations _borrowerOperations = IBorrowerOperations(_troveManager.borrowerOperationsAddress());
+    constructor(IBorrowerOperations _borrowerOperations, ITroveManager _troveManager, ITroveNFT _troveNFT, IWETH _WETH) AddRemoveManagers(_troveNFT) {
         borrowerOperations = _borrowerOperations;
-        IWETH _WETH = _borrowerOperations.WETH();
+        troveManager = _troveManager;
         IERC20 _collToken = _borrowerOperations.collToken();
         require(address(_WETH) != address(_collToken), "GCZ: Wrong coll branch");
         WETH = _WETH;
@@ -86,7 +88,8 @@ contract GasCompZapper is AddRemoveManagers {
     // TODO: open trove and join batch
 
     function addColl(uint256 _troveId, uint256 _amount) external {
-        address owner = troveManager.ownerOf(_troveId);
+        address owner = troveNFT.ownerOf(_troveId);
+        console2.log(owner, "owner");
         _requireSenderIsOwnerOrAddManager(_troveId, owner);
 
         IBorrowerOperations borrowerOperationsCached = borrowerOperations;
@@ -100,7 +103,7 @@ contract GasCompZapper is AddRemoveManagers {
     }
 
     function withdrawColl(uint256 _troveId, uint256 _amount) external {
-        address owner = troveManager.ownerOf(_troveId);
+        address owner = troveNFT.ownerOf(_troveId);
         address receiver = _requireSenderIsOwnerOrRemoveManager(_troveId, owner);
 
         borrowerOperations.withdrawColl(_troveId, _amount);
@@ -110,7 +113,7 @@ contract GasCompZapper is AddRemoveManagers {
     }
 
     function withdrawBold(uint256 _troveId, uint256 _boldAmount, uint256 _maxUpfrontFee) external {
-        address owner = troveManager.ownerOf(_troveId);
+        address owner = troveNFT.ownerOf(_troveId);
         address receiver = _requireSenderIsOwnerOrRemoveManager(_troveId, owner);
 
         borrowerOperations.withdrawBold(_troveId, _boldAmount, _maxUpfrontFee);
@@ -120,7 +123,7 @@ contract GasCompZapper is AddRemoveManagers {
     }
 
     function repayBold(uint256 _troveId, uint256 _boldAmount) external {
-        address owner = troveManager.ownerOf(_troveId);
+        address owner = troveNFT.ownerOf(_troveId);
         _requireSenderIsOwnerOrAddManager(_troveId, owner);
 
         // Pull Bold
@@ -168,7 +171,7 @@ contract GasCompZapper is AddRemoveManagers {
         uint256 _boldChange,
         bool _isDebtIncrease
     ) internal returns (address) {
-        address owner = troveManager.ownerOf(_troveId);
+        address owner = troveNFT.ownerOf(_troveId);
         address receiver = owner;
 
         if (!_isCollIncrease || _isDebtIncrease) {
@@ -214,11 +217,12 @@ contract GasCompZapper is AddRemoveManagers {
     }
 
     function closeTroveToRawETH(uint256 _troveId) external {
-        address owner = troveManager.ownerOf(_troveId);
+        address owner = troveNFT.ownerOf(_troveId);
         address payable receiver = payable(_requireSenderIsOwnerOrRemoveManager(_troveId, owner));
 
         // pull Bold for repayment
-        boldToken.transferFrom(msg.sender, address(this), troveManager.getTroveEntireDebt(_troveId));
+        LatestTroveData memory trove = troveManager.getLatestTroveData(_troveId);
+        boldToken.transferFrom(msg.sender, address(this), trove.entireDebt);
 
         uint256 collLeft = borrowerOperations.closeTrove(_troveId);
 

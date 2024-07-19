@@ -6,7 +6,6 @@ import "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./Interfaces/IBorrowerOperations.sol";
 import "./Interfaces/ITroveManager.sol";
-import "./Interfaces/ITroveNFT.sol";
 import "./Interfaces/IBoldToken.sol";
 import "./Interfaces/ICollSurplusPool.sol";
 import "./Interfaces/ISortedTroves.sol";
@@ -23,12 +22,11 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
 
     // --- Connected contract declarations ---
 
-    IERC20 internal immutable collToken;
-    ITroveNFT internal immutable troveNFT;
-    ITroveManager public troveManager;
+    IERC20 public immutable collToken;
+    ITroveManager internal troveManager;
     address internal gasPoolAddress;
     ICollSurplusPool internal collSurplusPool;
-    IBoldToken internal boldToken;
+    IBoldToken public boldToken;
     // A doubly linked list of Troves, sorted by their collateral ratios
     ISortedTroves public sortedTroves;
     // Wrapped ETH for liquidation reserve (gas compensation)
@@ -41,25 +39,6 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
 
     // Minimum collateral ratio for individual troves
     uint256 public immutable MCR;
-
-    /*
-     * Mapping from TroveId to granted address for operations that "give" money to the trove (add collateral, pay debt).
-     * Useful for instance for cold/hot wallet setups.
-     * If its value is zero address, any address is allowed to do those operations on behalf of trove owner.
-     * Otherwise, only the address in this mapping (and the trove owner) will be allowed.
-     * To restrict this permission to no one, trove owner should be set in this mapping.
-     */
-    mapping(uint256 => address) public addManagerOf;
-
-    /*
-     * Mapping from TroveId to granted address for operations that "withdraw" money from the trove (withdraw collateral, borrow).
-     * Useful for instance for cold/hot wallet setups.
-     * If its value is zero address, only owner is allowed to do those operations.
-     * Otherwise, only the address in this mapping (and the trove owner) will be allowed.
-     * Therefore, by default this permission is restricted to no one.
-     * Trove owner be set in this mapping is equivalent to zero address.
-     */
-    mapping(uint256 => address) public removeManagerOf;
 
     /*
     * Mapping from TroveId to individual delegate for interest rate setting.
@@ -84,6 +63,29 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
     Used to hold, return and assign variables inside a function, in order to avoid the error:
     "CompilerError: Stack too deep". */
 
+    struct OpenTroveVars {
+        ContractsCacheTMAPBT contractsCache;
+        TroveChange troveChange;
+        uint256 troveId;
+    }
+
+    struct OpenTroveAndJoinVars {
+        ContractsCacheTMAPBT contractsCache;
+        LatestBatchData batch;
+        TroveChange batchChange;
+        uint256 troveId;
+    }
+
+    struct LocalVariables_openTrove {
+        ContractsCacheTMAPBT contractsCache;
+        uint256 troveId;
+        uint256 price;
+        uint256 avgInterestRate;
+        uint256 entireDebt;
+        uint256 ICR;
+        uint256 newTCR;
+    }
+
     struct LocalVariables_adjustTrove {
         LatestTroveData trove;
         uint256 price;
@@ -91,17 +93,6 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         uint256 newICR;
         uint256 newDebt;
         uint256 newColl;
-    }
-
-    struct LocalVariables_openTrove {
-        ContractsCacheTMAPBT contractsCache;
-        uint256 troveId;
-        TroveChange troveChange;
-        uint256 price;
-        uint256 avgInterestRate;
-        uint256 entireDebt;
-        uint256 ICR;
-        uint256 newTCR;
     }
 
     struct LocalVariables_setInterestBatchManager {
@@ -147,10 +138,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
     error IsShutDown();
     error NotShutDown();
     error TCRNotBelowSCR();
-    error NotBorrower();
     error ZeroAdjustment();
-    error NotOwnerNorAddManager();
-    error NotOwnerNorRemoveManager();
     error NotOwnerNorInterestManager();
     error TroveInBatch();
     error InterestNotInDelegateRange();
@@ -190,12 +178,11 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
     event ShutDown(uint256 _tcr);
     event ShutDownFromOracleFailure(address _oracleAddress);
 
-    constructor(uint256 _mcr, uint256 _scr, IERC20 _collToken, ITroveNFT _troveNFT, IWETH _weth) AddRemoveManagers() {
+    constructor(uint256 _mcr, uint256 _scr, IERC20 _collToken, ITroveNFT _troveNFT, IWETH _weth) AddRemoveManagers(_troveNFT) {
         if (_mcr <= 1e18 || _mcr >= 2e18) revert InvalidMCR();
         if (_scr <= 1e18 || _scr >= 2e18) revert InvalidSCR();
 
         collToken = _collToken;
-        troveNFT = _troveNFT;
 
         WETH = _weth;
 
@@ -285,11 +272,11 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         _requireIsNotShutDown();
         _requireValidAnnualInterestRate(_annualInterestRate);
 
-        ContractsCacheTMAPBT memory contractsCache = ContractsCacheTMAPBT(troveManager, activePool, boldToken);
+        OpenTroveVars memory vars;
+        vars.contractsCache = ContractsCacheTMAPBT(troveManager, activePool, boldToken);
 
-        TroveChange memory troveChange;
-        uint256 troveId = _openTrove(
-            contractsCache,
+        vars.troveId = _openTrove(
+            vars.contractsCache,
             _owner,
             _ownerIndex,
             _collAmount,
@@ -299,68 +286,65 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
             0,
             0,
             _maxUpfrontFee,
-            troveChange
+            _addManager,
+            _removeManager,
+            _receiver,
+            vars.troveChange
         );
 
         // Set the stored Trove properties and mint the NFT
-        contractsCache.troveManager.onOpenTrove(_owner, troveId, troveChange, _annualInterestRate);
+        vars.contractsCache.troveManager.onOpenTrove(_owner, vars.troveId, vars.troveChange, _annualInterestRate);
 
-        sortedTroves.insert(troveId, _annualInterestRate, _upperHint, _lowerHint);
+        sortedTroves.insert(vars.troveId, _annualInterestRate, _upperHint, _lowerHint);
 
-        return troveId;
+        return vars.troveId;
     }
 
-    function openTroveAndJoinInterestBatchManager(
-        address _owner,
-        uint256 _ownerIndex,
-        uint256 _collAmount,
-        uint256 _boldAmount,
-        uint256 _upperHint,
-        uint256 _lowerHint,
-        address _interestBatchManager,
-        uint256 _maxUpfrontFee
-    ) external override returns (uint256) {
-        _requireValidInterestBatchManager(_interestBatchManager);
+    function openTroveAndJoinInterestBatchManager(OpenTroveAndJoinInterestBatchManagerParams calldata _params) external override returns (uint256) {
+        _requireValidInterestBatchManager(_params.interestBatchManager);
 
-        ContractsCacheTMAPBT memory contractsCache = ContractsCacheTMAPBT(troveManager, activePool, boldToken);
+        OpenTroveAndJoinVars memory vars;
+        vars.contractsCache = ContractsCacheTMAPBT(troveManager, activePool, boldToken);
 
-        LatestBatchData memory batch = contractsCache.troveManager.getLatestBatchData(_interestBatchManager);
+        vars.batch = vars.contractsCache.troveManager.getLatestBatchData(_params.interestBatchManager);
 
-        TroveChange memory batchChange;
         // We set old weighted values here, as it’s only necessary for batches, so we don’t need to pass them to _openTrove func
-        batchChange.oldWeightedRecordedDebt = batch.weightedRecordedDebt;
-        batchChange.oldWeightedRecordedBatchManagementFee = batch.weightedRecordedBatchManagementFee;
-        uint256 troveId = _openTrove(
-            contractsCache,
-            _owner,
-            _ownerIndex,
-            _collAmount,
-            _boldAmount,
-            batch.annualInterestRate,
-            _interestBatchManager,
-            batch.entireDebtWithoutRedistribution,
-            batch.annualManagementFee,
-            _maxUpfrontFee,
-            batchChange
+        vars.batchChange.oldWeightedRecordedDebt = vars.batch.weightedRecordedDebt;
+        vars.batchChange.oldWeightedRecordedBatchManagementFee = vars.batch.weightedRecordedBatchManagementFee;
+        vars.troveId = _openTrove(
+            vars.contractsCache,
+            _params.owner,
+            _params.ownerIndex,
+            _params.collAmount,
+            _params.boldAmount,
+            vars.batch.annualInterestRate,
+            _params.interestBatchManager,
+            vars.batch.entireDebtWithoutRedistribution,
+            vars.batch.annualManagementFee,
+            _params.maxUpfrontFee,
+            _params.addManager,
+            _params.removeManager,
+            _params.receiver,
+            vars.batchChange
         );
 
-        interestBatchManagerOf[troveId] = _interestBatchManager;
+        interestBatchManagerOf[vars.troveId] = _params.interestBatchManager;
 
         // Set the stored Trove properties and mint the NFT
-        contractsCache.troveManager.onOpenTroveAndJoinBatch(
-            _owner,
-            troveId,
-            batchChange,
-            _interestBatchManager,
-            batch.entireCollWithoutRedistribution,
-            batch.entireDebtWithoutRedistribution
+        vars.contractsCache.troveManager.onOpenTroveAndJoinBatch(
+            _params.owner,
+            vars.troveId,
+            vars.batchChange,
+            _params.interestBatchManager,
+            vars.batch.entireCollWithoutRedistribution,
+            vars.batch.entireDebtWithoutRedistribution
         );
 
         sortedTroves.insertIntoBatch(
-            troveId, BatchId.wrap(_interestBatchManager), batch.annualInterestRate, _upperHint, _lowerHint
+            vars.troveId, BatchId.wrap(_params.interestBatchManager), vars.batch.annualInterestRate, _params.upperHint, _params.lowerHint
         );
 
-        return troveId;
+        return vars.troveId;
     }
 
     function _openTrove(
@@ -374,6 +358,9 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         uint256 _batchEntireDebt,
         uint256 _batchManagementFee,
         uint256 _maxUpfrontFee,
+        address _addManager,
+        address _removeManager,
+        address _receiver,
         TroveChange memory _troveChange
     ) internal returns (uint256) {
         LocalVariables_openTrove memory vars;
@@ -428,13 +415,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
             _setRemoveManager(vars.troveId, _removeManager, _receiver);
         }
 
-        vars.contractsCache.activePool.mintAggInterestAndAccountForTroveChange(vars.troveChange, _interestBatchManager);
-        sortedTroves.insert(vars.troveId, _annualInterestRate, _upperHint, _lowerHint);
-
-        // Set the stored Trove properties and mint the NFT
-        vars.contractsCache.troveManager.onOpenTrove(
-            _owner, vars.troveId, _collAmount, vars.entireDebt, _annualInterestRate, vars.troveChange.upfrontFee
-        );
+        vars.contractsCache.activePool.mintAggInterestAndAccountForTroveChange(_troveChange, _interestBatchManager);
 
         // Pull coll tokens from sender and move them to the Active Pool
         _pullCollAndSendToActivePool(vars.contractsCache.activePool, _collAmount);
@@ -747,7 +728,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
 
         // --- Checks ---
 
-        address owner = contractsCache.troveManager.ownerOf(_troveId);
+        address owner = troveNFT.ownerOf(_troveId);
         address receiver = _requireSenderIsOwnerOrRemoveManager(_troveId, owner);
         _requireTroveIsOpen(contractsCache.troveManager, _troveId);
 
@@ -848,16 +829,6 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         );
 
         contractsCache.activePool.mintAggInterestAndAccountForTroveChange(batchChange, _batchManager);
-    }
-
-    function setAddManager(uint256 _troveId, address _manager) external {
-        _requireCallerIsBorrower(_troveId);
-        addManagerOf[_troveId] = _manager;
-    }
-
-    function setRemoveManager(uint256 _troveId, address _manager) external {
-        _requireCallerIsBorrower(_troveId);
-        removeManagerOf[_troveId] = _manager;
     }
 
     function getInterestIndividualDelegateOf(uint256 _troveId)
@@ -1294,30 +1265,12 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         }
     }
 
-    function _requireCallerIsBorrower(uint256 _troveId) internal view {
-        if (msg.sender != troveNFT.ownerOf(_troveId)) {
-            revert NotBorrower();
-        }
-    }
-
     function _requireNonZeroAdjustment(TroveChange memory _troveChange) internal pure {
         if (
             _troveChange.collIncrease == 0 && _troveChange.collDecrease == 0 && _troveChange.debtIncrease == 0
                 && _troveChange.debtDecrease == 0
         ) {
             revert ZeroAdjustment();
-        }
-    }
-
-    function _requireSenderIsOwnerOrAddManager(uint256 _troveId, address _owner) internal view {
-        if (msg.sender != _owner && msg.sender != addManagerOf[_troveId]) {
-            revert NotOwnerNorAddManager();
-        }
-    }
-
-    function _requireSenderIsOwnerOrRemoveManager(uint256 _troveId, address _owner) internal view {
-        if (msg.sender != _owner && msg.sender != removeManagerOf[_troveId]) {
-            revert NotOwnerNorRemoveManager();
         }
     }
 

@@ -171,7 +171,7 @@ function _deployAndConnectContracts(TroveManagerParams[] memory troveManagerPara
     vars.collaterals = new IERC20[](vars.numCollaterals);
 
     // Deploy the first branch with WETH collateral
-    vars.collaterals[0] = WETH;
+    vars.collaterals[0] = _WETH;
     for (uint256 i = 1; i < vars.numCollaterals; i++) {
         IERC20 collToken = new ERC20Faucet(
             string.concat("Staked ETH", string(abi.encode(i))), // _name
@@ -185,16 +185,16 @@ function _deployAndConnectContracts(TroveManagerParams[] memory troveManagerPara
     collateralRegistry = new CollateralRegistry(boldToken, vars.collaterals);
 
     vars.contracts = _deployAndConnectCollateralContractsDev(
-        0, WETH, boldToken, collateralRegistry, WETH, troveManagerParamsArray[0]
+        0, _WETH, boldToken, collateralRegistry, _WETH, troveManagerParamsArray[0]
     );
-    contractsArray[0] = contracts;
+    contractsArray[0] = vars.contracts;
 
     // Deploy the remaining branches with LST collateral
     for (uint256 i = 1; i < vars.numCollaterals; i++) {
         vars.contracts = _deployAndConnectCollateralContractsDev(
-            i, vars.collaterals[i], boldToken, collateralRegistry, WETH, troveManagerParamsArray[i]
+            i, vars.collaterals[i], boldToken, collateralRegistry, _WETH, troveManagerParamsArray[i]
         );
-        contractsArray[i] = contracts;
+        contractsArray[i] = vars.contracts;
     }
 
     hintHelpers = new HintHelpers(collateralRegistry);
@@ -319,7 +319,7 @@ function _deployAndConnectCollateralContractsDev(
     ICollateralRegistry _collateralRegistry,
     IWETH _weth,
     TroveManagerParams memory _troveManagerParams
-) returns (LiquityContractsDev memory contractsDev) {
+) returns (LiquityContractsDev memory contracts) {
     // TODO: optimize deployment order & constructor args & connector functions
 
     contracts.collToken = _collToken;
@@ -355,7 +355,8 @@ function _deployAndConnectCollateralContractsDev(
     contracts.troveManager = new TroveManagerTester(vars);
 
     // Pass the bare contract interfaces to the connector func
-    connectContracts(_branch, _boldToken, _weth, _collateralRegistry, contracts);
+    connectContracts(_branch, _boldToken, _weth, _collateralRegistry, _devToMainnet(contracts));
+}
 
 function _devToMainnet(LiquityContractsDev memory contractsDev) pure returns (LiquityContracts memory contracts) {
     contracts.activePool = contractsDev.activePool;
@@ -365,6 +366,7 @@ function _devToMainnet(LiquityContractsDev memory contractsDev) pure returns (Li
     contracts.sortedTroves = contractsDev.sortedTroves;
     contracts.stabilityPool = contractsDev.stabilityPool;
     contracts.troveManager = ITroveManager(contractsDev.troveManager);
+    contracts.troveNFT = contractsDev.troveNFT;
     contracts.priceFeed = IPriceFeed(contractsDev.priceFeed);
     contracts.gasPool = contractsDev.gasPool;
     contracts.interestRouter = contractsDev.interestRouter;
@@ -416,7 +418,7 @@ function _deployAndConnectCollateralContractsMainnet(
 function connectContracts(
     uint256 _branch,
     IBoldToken _boldToken,
-    IERC20 _weth,
+    IWETH _weth,
     ICollateralRegistry _collateralRegistry,
     LiquityContracts memory contracts
 ) {

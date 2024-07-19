@@ -240,10 +240,10 @@ contract InvariantsTestHandler is BaseHandler, BaseMultiCollateralTest {
 
         for (uint256 i = 0; i < branches.length; ++i) {
             LiquityContractsDev memory c = branches[i];
-            MCR[i] = c.troveManager.MCR();
-            SCR[i] = c.troveManager.SCR();
-            LIQ_PENALTY_SP[i] = c.troveManager.LIQUIDATION_PENALTY_SP();
-            LIQ_PENALTY_REDIST[i] = c.troveManager.LIQUIDATION_PENALTY_REDISTRIBUTION();
+            MCR[i] = c.troveManager.get_MCR();
+            SCR[i] = c.troveManager.get_SCR();
+            LIQ_PENALTY_SP[i] = c.troveManager.get_LIQUIDATION_PENALTY_SP();
+            LIQ_PENALTY_REDIST[i] = c.troveManager.get_LIQUIDATION_PENALTY_REDISTRIBUTION();
             _price[i] = c.priceFeed.getPrice();
         }
     }
