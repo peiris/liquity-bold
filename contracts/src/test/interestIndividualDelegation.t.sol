@@ -1,5 +1,6 @@
 pragma solidity ^0.8.18;
 
+import "../Dependencies/AddRemoveManagers.sol";
 import "./TestContracts/DevTestSetup.sol";
 
 contract InterestIndividualDelegationTest is DevTestSetup {
@@ -44,11 +45,11 @@ contract InterestIndividualDelegationTest is DevTestSetup {
         uint256 troveId = openTroveNoHints100pct(A, 100e18, 2000e18, 5e16);
 
         vm.startPrank(B);
-        vm.expectRevert(BorrowerOperations.NotBorrower.selector);
+        vm.expectRevert(AddRemoveManagers.NotBorrower.selector);
         borrowerOperations.setInterestIndividualDelegate(troveId, B, 1e16, 20e16, 0, 0, 0, 0);
-        vm.expectRevert(BorrowerOperations.NotBorrower.selector);
+        vm.expectRevert(AddRemoveManagers.NotBorrower.selector);
         borrowerOperations.setInterestIndividualDelegate(troveId, A, 1e16, 20e16, 0, 0, 0, 0);
-        vm.expectRevert(BorrowerOperations.NotBorrower.selector);
+        vm.expectRevert(AddRemoveManagers.NotBorrower.selector);
         borrowerOperations.setInterestIndividualDelegate(troveId, C, 1e16, 20e16, 0, 0, 0, 0);
         vm.stopPrank();
     }
@@ -61,12 +62,12 @@ contract InterestIndividualDelegationTest is DevTestSetup {
         assertEq(delegate.account, B, "Wrong individual delegate");
 
         vm.startPrank(B);
-        vm.expectRevert(BorrowerOperations.NotBorrower.selector);
+        vm.expectRevert(AddRemoveManagers.NotBorrower.selector);
         borrowerOperations.removeInterestIndividualDelegate(troveId);
         vm.stopPrank();
 
         vm.startPrank(C);
-        vm.expectRevert(BorrowerOperations.NotBorrower.selector);
+        vm.expectRevert(AddRemoveManagers.NotBorrower.selector);
         borrowerOperations.removeInterestIndividualDelegate(troveId);
         vm.stopPrank();
     }

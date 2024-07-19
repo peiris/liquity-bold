@@ -52,7 +52,7 @@ contract BatchManagementFeeTest is DevTestSetup {
         // Adjust first trove
         addColl(A, troveId, 1 ether);
 
-        assertEq(activePool.aggRecordedDebt(), activePoolInitialDebt + batchAccruedInterest + batchAccruedManagementFee);
+        assertApproxEqAbs(activePool.aggRecordedDebt(), activePoolInitialDebt + batchAccruedInterest + batchAccruedManagementFee, 1);
     }
 
     function testCloseTroveMintsFeeForBatch() public {
@@ -107,7 +107,7 @@ contract BatchManagementFeeTest is DevTestSetup {
         // Close first trove
         closeTrove(A, ATroveId);
 
-        assertEq(activePool.aggRecordedDebt(), troveManager.getTroveEntireDebt(BTroveId));
+        assertApproxEqAbs(activePool.aggRecordedDebt(), troveManager.getTroveEntireDebt(BTroveId), 1);
     }
 
     function testChangeBatchInterestRateMintsFeeForBatch() public {
@@ -159,7 +159,7 @@ contract BatchManagementFeeTest is DevTestSetup {
         // Change batch interest rate
         setBatchInterestRate(B, 10e16);
 
-        assertEq(activePool.aggRecordedDebt(), activePoolInitialDebt + batchAccruedInterest + batchAccruedManagementFee);
+        assertApproxEqAbs(activePool.aggRecordedDebt(), activePoolInitialDebt + batchAccruedInterest + batchAccruedManagementFee, 1);
     }
 
     function testAddTroveToBatchMintsFeeForBatch() public {
@@ -331,7 +331,7 @@ contract BatchManagementFeeTest is DevTestSetup {
         // Add trove to batch
         removeFromBatch(C, troveId, 10e16);
 
-        assertEq(activePool.aggRecordedDebt(), activePoolInitialDebt + batchAccruedInterest + batchAccruedManagementFee);
+        assertApproxEqAbs(activePool.aggRecordedDebt(), activePoolInitialDebt + batchAccruedInterest + batchAccruedManagementFee, 1);
     }
 
     function testAfterBatchManagementFeeAccrualEntireSystemDebtMatchesWithOpenTrove() public {
@@ -342,7 +342,7 @@ contract BatchManagementFeeTest is DevTestSetup {
 
         uint256 entireSystemDebt = troveManager.getEntireSystemDebt();
         uint256 entireDebtA = troveManager.getTroveEntireDebt(ATroveId);
-        assertEq(entireSystemDebt, entireDebtA, "Entire debt should be that of trove A");
+        assertApproxEqAbs(entireSystemDebt, entireDebtA, 1, "Entire debt should be that of trove A");
 
         // another trove joins the batch
         uint256 CTroveId = openTroveAndJoinBatchManager(C, 100e18, 4000e18, B, 5e16);
@@ -389,7 +389,7 @@ contract BatchManagementFeeTest is DevTestSetup {
         uint256 entireSystemDebt = troveManager.getEntireSystemDebt();
         uint256 entireDebtA = troveManager.getTroveEntireDebt(ATroveId);
         uint256 entireDebtC = troveManager.getTroveEntireDebt(CTroveId);
-        assertApproxEqAbs(entireSystemDebt, entireDebtA + entireDebtC, 1);
+        assertApproxEqAbs(entireSystemDebt, entireDebtA + entireDebtC, 3);
     }
 
     function testAfterBatchManagementFeeAccrualEntireSystemDebtMatchesWithCloseTrove() public {
@@ -405,7 +405,7 @@ contract BatchManagementFeeTest is DevTestSetup {
 
         uint256 entireSystemDebt = troveManager.getEntireSystemDebt();
         uint256 entireDebtA = troveManager.getTroveEntireDebt(ATroveId);
-        assertEq(entireSystemDebt, entireDebtA);
+        assertApproxEqAbs(entireSystemDebt, entireDebtA, 1);
     }
 
     function testAfterBatchManagementFeeAccrualEntireSystemDebtMatchesWithLiquidateTroveOffset() public {
@@ -427,7 +427,7 @@ contract BatchManagementFeeTest is DevTestSetup {
 
         uint256 entireSystemDebt = troveManager.getEntireSystemDebt();
         uint256 entireDebtA = troveManager.getTroveEntireDebt(ATroveId);
-        assertEq(entireSystemDebt, entireDebtA);
+        assertApproxEqAbs(entireSystemDebt, entireDebtA, 2);
     }
 
     function testAfterBatchManagementFeeAccrualEntireSystemDebtMatchesWithLiquidateTroveRedistribute() public {

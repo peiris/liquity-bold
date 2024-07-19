@@ -154,11 +154,13 @@ contract Deployment is DevTestSetup {
 
     //--- BorrowerOperations ---
 
+    /*
     function testBorrowerOperationsHasCorrectTroveManagerAddress() public {
         address troveManagerAddress = address(troveManager);
         address recordedTroveManagerAddress = address(borrowerOperations.troveManager());
         assertEq(troveManagerAddress, recordedTroveManagerAddress);
     }
+    */
 
     function testBorrowerOperationsHasCorrectPriceFeedAddress() public {
         address priceFeedAddress = address(priceFeed);

@@ -12,11 +12,10 @@ import "./IWETH.sol";
 interface IBorrowerOperations is ILiquityBase, IAddRemoveManagers {
     function MCR() external view returns (uint256);
     function SCR() external view returns (uint256);
-    function troveManager() external view returns (ITroveManager);
-    function sortedTroves() external view returns (ISortedTroves);
+
     function collToken() external view returns (IERC20);
+    function sortedTroves() external view returns (ISortedTroves);
     function boldToken() external view returns (IBoldToken);
-    function WETH() external view returns (IWETH);
 
     function setAddresses(
         address _troveManagerAddress,
@@ -54,16 +53,21 @@ interface IBorrowerOperations is ILiquityBase, IAddRemoveManagers {
         address _receiver
     ) external returns (uint256);
 
-    function openTroveAndJoinInterestBatchManager(
-        address _owner,
-        uint256 _ownerIndex,
-        uint256 _ETHAmount,
-        uint256 _boldAmount,
-        uint256 _upperHint,
-        uint256 _lowerHint,
-        address _interestBatchManager,
-        uint256 _maxUpfrontFee
-    ) external returns (uint256);
+    struct OpenTroveAndJoinInterestBatchManagerParams {
+        address owner;
+        uint256 ownerIndex;
+        uint256 collAmount;
+        uint256 boldAmount;
+        uint256 upperHint;
+        uint256 lowerHint;
+        address interestBatchManager;
+        uint256 maxUpfrontFee;
+        address addManager;
+        address removeManager;
+        address receiver;
+    }
+
+        function openTroveAndJoinInterestBatchManager(OpenTroveAndJoinInterestBatchManagerParams calldata _params) external returns (uint256);
 
     function addColl(uint256 _troveId, uint256 _ETHAmount) external;
 

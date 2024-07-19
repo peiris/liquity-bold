@@ -1,5 +1,6 @@
 pragma solidity ^0.8.18;
 
+import "../Dependencies/AddRemoveManagers.sol";
 import "./TestContracts/DevTestSetup.sol";
 
 contract InterestBatchManagementTest is DevTestSetup {
@@ -81,11 +82,11 @@ contract InterestBatchManagementTest is DevTestSetup {
         uint256 troveId = openTroveNoHints100pct(A, 100e18, 5000e18, 5e16);
 
         vm.startPrank(B);
-        vm.expectRevert(BorrowerOperations.NotBorrower.selector);
+        vm.expectRevert(AddRemoveManagers.NotBorrower.selector);
         borrowerOperations.setInterestBatchManager(troveId, B, 0, 0, 1e24);
-        vm.expectRevert(BorrowerOperations.NotBorrower.selector);
+        vm.expectRevert(AddRemoveManagers.NotBorrower.selector);
         borrowerOperations.setInterestBatchManager(troveId, A, 0, 0, 1e24);
-        vm.expectRevert(BorrowerOperations.NotBorrower.selector);
+        vm.expectRevert(AddRemoveManagers.NotBorrower.selector);
         borrowerOperations.setInterestBatchManager(troveId, C, 0, 0, 1e24);
         vm.stopPrank();
     }
@@ -274,31 +275,39 @@ contract InterestBatchManagementTest is DevTestSetup {
 
         // Register a new batch manager and add a trove to it
         registerBatchManager(C);
+        IBorrowerOperations.OpenTroveAndJoinInterestBatchManagerParams memory paramsD = IBorrowerOperations.OpenTroveAndJoinInterestBatchManagerParams({
+            owner: D,
+            ownerIndex: 0,
+            collAmount: 100e18,
+            boldAmount: 5000e18,
+            upperHint: 0,
+            lowerHint: 0,
+            interestBatchManager: C,
+            maxUpfrontFee: 1e24,
+            addManager: address(0),
+            removeManager: address(0),
+            receiver: address(0)
+            });
         vm.startPrank(D);
-        troveIDs.D = borrowerOperations.openTroveAndJoinInterestBatchManager(
-            D,
-            0,
-            100e18, // coll
-            5000e18, // bold
-            0, // _upperHint
-            0, // _lowerHint
-            C, // interest batch manager
-            1e24
-        );
+        troveIDs.D = borrowerOperations.openTroveAndJoinInterestBatchManager(paramsD);
         vm.stopPrank();
 
         // Add a new trove to first manager
+        IBorrowerOperations.OpenTroveAndJoinInterestBatchManagerParams memory paramsE = IBorrowerOperations.OpenTroveAndJoinInterestBatchManagerParams({
+            owner: E,
+            ownerIndex: 0,
+            collAmount: 100e18,
+            boldAmount: 5000e18,
+            upperHint: 0,
+            lowerHint: 0,
+            interestBatchManager: B,
+            maxUpfrontFee: 1e24,
+            addManager: address(0),
+            removeManager: address(0),
+            receiver: address(0)
+            });
         vm.startPrank(E);
-        troveIDs.E = borrowerOperations.openTroveAndJoinInterestBatchManager(
-            E,
-            0,
-            100e18, // coll
-            5000e18, // bold
-            0, // _upperHint
-            0, // _lowerHint
-            B, // interest batch manager
-            1e24
-        );
+        troveIDs.E = borrowerOperations.openTroveAndJoinInterestBatchManager(paramsE);
         vm.stopPrank();
 
         // Fast forward 1 year
