@@ -12,7 +12,7 @@ import "./HintHelpers.sol";
 import "./MultiTroveGetter.sol";
 import "./SortedTroves.sol";
 import "./StabilityPool.sol";
-import "./test/TestContracts/BorrowerOperationsTester.sol";
+import "./test/TestContracts/BorrowerOperationsTester.t.sol";
 import "./test/TestContracts/TroveManagerTester.t.sol";
 import "./TroveNFT.sol";
 import "./CollateralRegistry.sol";
@@ -328,7 +328,7 @@ function _deployAndConnectCollateralContractsDev(
     contracts.activePool = new ActivePool(address(_collToken));
     contracts.troveNFT = new TroveNFT();
     contracts.borrowerOperations =
-        new BorrowerOperations(_troveManagerParams.MCR, _troveManagerParams.SCR, _collToken, contracts.troveNFT, _weth);
+        new BorrowerOperationsTester(_troveManagerParams.MCR, _troveManagerParams.SCR, _collToken, contracts.troveNFT, _weth);
     contracts.collSurplusPool = new CollSurplusPool(address(_collToken));
     contracts.defaultPool = new DefaultPool(address(_collToken));
     contracts.gasPool = new GasPool();

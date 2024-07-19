@@ -9,7 +9,7 @@ import "../../Interfaces/IDefaultPool.sol";
 import "../../Interfaces/IPriceFeed.sol";
 import "../../Interfaces/ISortedTroves.sol";
 import "../../Interfaces/IStabilityPool.sol";
-import "./BorrowerOperationsTester.sol";
+import "./BorrowerOperationsTester.t.sol";
 import "./TroveManagerTester.t.sol";
 import "../../Interfaces/ICollateralRegistry.sol";
 import "./PriceFeedTestnet.sol";
