@@ -181,7 +181,10 @@ contract BaseTest is TestAccounts {
             0, // _upperHint
             0, // _lowerHint
             _annualInterestRate,
-            upfrontFee
+            upfrontFee,
+            address(0),
+            address(0),
+            address(0)
         );
 
         vm.stopPrank();
@@ -197,7 +200,7 @@ contract BaseTest is TestAccounts {
         (uint256 borrow, uint256 upfrontFee) = findAmountToBorrowWithOpenTrove(_debt, _interestRate);
 
         vm.prank(_account);
-        troveId = borrowerOperations.openTrove(_account, _index, _coll, borrow, 0, 0, _interestRate, upfrontFee);
+        troveId = borrowerOperations.openTrove(_account, _index, _coll, borrow, 0, 0, _interestRate, upfrontFee, address(0), address(0), address(0));
     }
 
     function openTroveWithExactICRAndDebt(
@@ -212,7 +215,7 @@ contract BaseTest is TestAccounts {
         coll = mulDivCeil(_debt, _ICR, price);
 
         vm.prank(_account);
-        troveId = borrowerOperations.openTrove(_account, _index, coll, borrow, 0, 0, _interestRate, upfrontFee);
+        troveId = borrowerOperations.openTrove(_account, _index, coll, borrow, 0, 0, _interestRate, upfrontFee, address(0), address(0), address(0));
     }
 
     function adjustTrove100pct(

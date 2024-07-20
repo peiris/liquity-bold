@@ -31,7 +31,10 @@ contract MulticollateralTest is DevTestSetup {
             0, // _upperHint
             0, // _lowerHint
             _annualInterestRate,
-            upfrontFee
+            upfrontFee,
+            address(0),
+            address(0),
+            address(0)
         );
 
         vm.stopPrank();

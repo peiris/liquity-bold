@@ -222,8 +222,8 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         address gasPoolAddress;
         ICollSurplusPool collSurplusPool;
         IPriceFeed priceFeed;
-        IBoldToken boldToken;
         ISortedTroves sortedTroves;
+        IBoldToken boldToken;
         IWETH weth;
         ICollateralRegistry collateralRegistry;
     }
@@ -379,6 +379,11 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
             singleLiquidation.trove.redistCollGain,
             -int256(singleLiquidation.trove.entireColl)
         );
+    }
+
+    // Return the amount of Coll to be drawn from a trove's collateral and sent as gas compensation.
+    function _getCollGasCompensation(uint256 _entireColl) internal pure returns (uint256) {
+        return LiquityMath._min(_entireColl / COLL_GAS_COMPENSATION_DIVISOR, COLL_GAS_COMPENSATION_CAP);
     }
 
     /* In a full liquidation, returns the values for a trove's coll and debt to be offset, and coll and debt to be

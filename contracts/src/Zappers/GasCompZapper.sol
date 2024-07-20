@@ -18,16 +18,22 @@ contract GasCompZapper is AddRemoveManagers {
     IERC20 public immutable collToken;
     IBoldToken public immutable boldToken;
 
-    constructor(IBorrowerOperations _borrowerOperations, ITroveManager _troveManager, ITroveNFT _troveNFT, IWETH _WETH)
+    constructor(
+        IBorrowerOperations _borrowerOperations,
+        ITroveManager _troveManager,
+        ITroveNFT _troveNFT,
+        IERC20 _collToken,
+        IBoldToken _boldToken,
+        IWETH _WETH
+    )
         AddRemoveManagers(_troveNFT)
     {
         borrowerOperations = _borrowerOperations;
         troveManager = _troveManager;
-        IERC20 _collToken = _borrowerOperations.collToken();
         require(address(_WETH) != address(_collToken), "GCZ: Wrong coll branch");
-        WETH = _WETH;
         collToken = _collToken;
-        boldToken = _borrowerOperations.boldToken();
+        boldToken = _boldToken;
+        WETH = _WETH;
     }
 
     struct OpenTroveParams {

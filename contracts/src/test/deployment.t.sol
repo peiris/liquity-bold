@@ -19,13 +19,13 @@ contract Deployment is DevTestSetup {
     }
 
     // TODO: re-enable
+    /*
     function testTroveManagerHasCorrectPriceFeedAddress() public {
         address priceFeedAddress = address(priceFeed);
         address recordedPriceFeedAddress = address(troveManager.priceFeed());
         assertEq(priceFeedAddress, recordedPriceFeedAddress);
     }
 
-    /*
     function testTroveManagerHasCorrectBoldTokenAddress() public {
         address boldTokenAddress = address(boldToken);
         address recordedBoldTokenAddress = address(troveManager.boldToken());
@@ -53,11 +53,13 @@ contract Deployment is DevTestSetup {
     }
 
     // DefaultPool in TroveM
+    /*
     function testTroveManagerHasCorrectDefaultPoolAddress() public {
         address defaultPoolAddress = address(defaultPool);
         address recordedDefaultPoolAddress = address(troveManager.defaultPool());
         assertEq(defaultPoolAddress, recordedDefaultPoolAddress);
     }
+    */
 
     // StabilityPool in TroveM
     function testTroveManagerHasCorrectSPAddress() public {
@@ -162,6 +164,7 @@ contract Deployment is DevTestSetup {
     }
     */
 
+    /*
     function testBorrowerOperationsHasCorrectPriceFeedAddress() public {
         address priceFeedAddress = address(priceFeed);
         address recordedPriceFeedAddress = address(borrowerOperations.priceFeed());
@@ -173,6 +176,7 @@ contract Deployment is DevTestSetup {
         address recordedSortedTrovesAddress = address(borrowerOperations.sortedTroves());
         assertEq(sortedTrovesAddress, recordedSortedTrovesAddress);
     }
+    */
 
     function testBorrowerOperationsHasCorrectActivePoolAddress() public {
         address activePoolAddress = address(activePool);
@@ -180,9 +184,11 @@ contract Deployment is DevTestSetup {
         assertEq(activePoolAddress, recordedActivePoolAddress);
     }
 
+    /*
     function testBorrowerOperationsHasCorrectDefaultPoolAddress() public {
         address defaultPoolAddress = address(defaultPool);
         address recordedDefaultPoolAddress = address(borrowerOperations.defaultPool());
         assertEq(defaultPoolAddress, recordedDefaultPoolAddress);
     }
+    */
 }

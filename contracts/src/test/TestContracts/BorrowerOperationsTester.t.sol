@@ -8,12 +8,19 @@ import "./Interfaces/IBorrowerOperationsTester.sol";
 /* Tester contract inherits from BorrowerOperations, and provides external functions
 for testing the parent's internal functions. */
 contract BorrowerOperationsTester is BorrowerOperations, IBorrowerOperationsTester {
-    constructor(uint256 _ccr, uint256 _mcr, uint256 _scr, IERC20 _collToken, ITroveNFT _troveNFT, IWETH _weth)
-        BorrowerOperations(_ccr, _mcr, _scr, _collToken, _troveNFT, _weth)
-    {}
+    constructor(ConstructorVars memory _vars) BorrowerOperations(_vars) {}
 
     function get_CCR() external view returns (uint256) {
         return CCR;
+    }
+    function getCollToken() external view returns (IERC20) {
+        return collToken;
+    }
+    function getSortedTroves() external view returns (ISortedTroves) {
+        return sortedTroves;
+    }
+    function getBoldToken() external view returns (IBoldToken) {
+        return boldToken;
     }
 
     function applyTroveInterestPermissionless(uint256 _troveId) external {

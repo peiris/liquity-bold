@@ -43,7 +43,7 @@ contract ZapperGasCompTest is DevTestSetup {
         collToken = contractsArray[1].collToken;
 
         // Deploy zapper (TODO: should we move it to deployment.sol?)
-        gasCompZapper = new GasCompZapper(borrowerOperations, troveManager, troveNFT, WETH);
+        gasCompZapper = new GasCompZapper(borrowerOperations, troveManager, troveNFT, collToken, boldToken, WETH);
 
         // Give some Collateral to test accounts
         uint256 initialCollateralAmount = 10_000e18;
@@ -372,7 +372,10 @@ contract ZapperGasCompTest is DevTestSetup {
             0, // _upperHint
             0, // _lowerHint
             MIN_ANNUAL_INTEREST_RATE, // annualInterestRate,
-            10000e18 // upfrontFee
+            10000e18, // upfrontFee
+            address(0),
+            address(0),
+            address(0)
         );
         boldToken.transfer(A, troveManager.getTroveEntireDebt(troveId) - boldAmount);
         vm.stopPrank();

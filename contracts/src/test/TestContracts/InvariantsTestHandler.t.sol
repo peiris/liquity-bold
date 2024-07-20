@@ -362,7 +362,7 @@ contract InvariantsTestHandler is BaseHandler, BaseMultiCollateralTest {
         vm.prank(msg.sender);
 
         try v.c.borrowerOperations.openTrove(
-            msg.sender, OWNER_INDEX, v.coll, borrowed, v.upperHint, v.lowerHint, interestRate, v.upfrontFee
+            msg.sender, OWNER_INDEX, v.coll, borrowed, v.upperHint, v.lowerHint, interestRate, v.upfrontFee, address(0), address(0), address(0)
         ) {
             uint256 icr_ = _CR(i, v.coll, v.debt); // can be slightly different from `icr` due to int division
             uint256 newTCR = _TCR(i, int256(v.coll), int256(borrowed), v.upfrontFee);

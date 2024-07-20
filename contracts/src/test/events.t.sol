@@ -92,7 +92,7 @@ contract TroveEventsTest is EventsTest, ITroveEvents {
         );
 
         vm.prank(owner);
-        borrowerOperations.openTrove(owner, ownerIndex, coll, borrow, 0, 0, interestRate, upfrontFee);
+        borrowerOperations.openTrove(owner, ownerIndex, coll, borrow, 0, 0, interestRate, upfrontFee, address(0), address(0), address(0));
     }
 
     function test_OpenTroveEmitsTroveOperation() external {
@@ -118,7 +118,7 @@ contract TroveEventsTest is EventsTest, ITroveEvents {
         );
 
         vm.prank(owner);
-        borrowerOperations.openTrove(owner, ownerIndex, coll, borrow, 0, 0, interestRate, upfrontFee);
+        borrowerOperations.openTrove(owner, ownerIndex, coll, borrow, 0, 0, interestRate, upfrontFee, address(0), address(0), address(0));
     }
 
     function test_AdjustTroveEmitsTroveUpdated() external {

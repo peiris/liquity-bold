@@ -16,31 +16,7 @@ interface IBorrowerOperations is ILiquityBase, IAddRemoveManagers {
     function MCR() external view returns (uint256);
     function SCR() external view returns (uint256);
 
-    function collToken() external view returns (IERC20);
-    function sortedTroves() external view returns (ISortedTroves);
-    function boldToken() external view returns (IBoldToken);
-
-    function setAddresses(
-        address _troveManagerAddress,
-        address _activePoolAddress,
-        address _defaultPoolAddress,
-        address _gasPoolAddress,
-        address _collSurplusPoolAddress,
-        address _priceFeedAddress,
-        address _sortedTrovesAddress,
-        address _boldTokenAddress
-    ) external;
-
-    function openTrove(
-        address _owner,
-        uint256 _ownerIndex,
-        uint256 _ETHAmount,
-        uint256 _boldAmount,
-        uint256 _upperHint,
-        uint256 _lowerHint,
-        uint256 _annualInterestRate,
-        uint256 _maxUpfrontFee
-    ) external returns (uint256);
+    function setAddresses(ITroveManager _troveManager) external;
 
     function openTrove(
         address _owner,

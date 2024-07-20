@@ -46,7 +46,7 @@ contract BorrowerOperationsTest is DevTestSetup {
         uint256 activePoolDebtBefore = activePool.getBoldDebt();
 
         vm.prank(A);
-        uint256 troveId = borrowerOperations.openTrove(A, 0, 100 ether, borrow, 0, 0, interestRate, upfrontFee);
+        uint256 troveId = borrowerOperations.openTrove(A, 0, 100 ether, borrow, 0, 0, interestRate, upfrontFee, address(0), address(0), address(0));
 
         uint256 troveDebt = troveManager.getTroveEntireDebt(troveId);
         uint256 activePoolDebtAfter = activePool.getBoldDebt();
@@ -65,7 +65,7 @@ contract BorrowerOperationsTest is DevTestSetup {
 
         vm.prank(A);
         vm.expectRevert(BorrowerOperations.UpfrontFeeTooHigh.selector);
-        borrowerOperations.openTrove(A, 0, 100 ether, borrow, 0, 0, interestRate, upfrontFee - 1);
+        borrowerOperations.openTrove(A, 0, 100 ether, borrow, 0, 0, interestRate, upfrontFee - 1, address(0), address(0), address(0));
     }
 
     function testWithdrawBoldChargesUpfrontFee() public {

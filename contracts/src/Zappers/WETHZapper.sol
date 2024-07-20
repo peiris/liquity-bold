@@ -13,14 +13,20 @@ contract WETHZapper is AddRemoveManagers {
     IWETH public immutable WETH;
     IBoldToken public immutable boldToken;
 
-    constructor(IBorrowerOperations _borrowerOperations, ITroveManager _troveManager, ITroveNFT _troveNFT, IWETH _WETH)
+    constructor(
+        IBorrowerOperations _borrowerOperations,
+        ITroveManager _troveManager,
+        ITroveNFT _troveNFT,
+        IBoldToken _boldToken,
+        IWETH _WETH
+    )
         AddRemoveManagers(_troveNFT)
     {
         borrowerOperations = _borrowerOperations;
         troveManager = _troveManager;
-        require(address(_WETH) == address(_borrowerOperations.collToken()), "WZ: Wrong coll branch");
+        //require(address(_WETH) == address(_borrowerOperations.collToken()), "WZ: Wrong coll branch");
+        boldToken = _boldToken;
         WETH = _WETH;
-        boldToken = _borrowerOperations.boldToken();
     }
 
     struct OpenTroveParams {

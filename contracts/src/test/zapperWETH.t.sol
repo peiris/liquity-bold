@@ -50,7 +50,7 @@ contract ZapperWETHTest is DevTestSetup {
         troveNFT = contractsArray[0].troveNFT;
 
         // Deploy zapper (TODO: should we move it to deployment.sol?)
-        wethZapper = new WETHZapper(borrowerOperations, troveManager, troveNFT, WETH);
+        wethZapper = new WETHZapper(borrowerOperations, troveManager, troveNFT, boldToken, WETH);
     }
 
     function testCanOpenTrove() external {
@@ -350,7 +350,10 @@ contract ZapperWETHTest is DevTestSetup {
             0, // _upperHint
             0, // _lowerHint
             MIN_ANNUAL_INTEREST_RATE, // annualInterestRate,
-            10000e18 // upfrontFee
+            10000e18, // upfrontFee
+            address(0),
+            address(0),
+            address(0)
         );
         boldToken.transfer(A, troveManager.getTroveEntireDebt(troveId) - boldAmount);
         vm.stopPrank();

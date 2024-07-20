@@ -328,9 +328,6 @@ function _deployAndConnectCollateralContractsDev(
     // Deploy all contracts, using testers for TM and PriceFeed
     contracts.activePool = new ActivePool(address(_collToken));
     contracts.troveNFT = new TroveNFT();
-    contracts.borrowerOperations = new BorrowerOperationsTester(
-        _troveManagerParams.CCR, _troveManagerParams.MCR, _troveManagerParams.SCR, _collToken, contracts.troveNFT, _weth
-    );
     contracts.collSurplusPool = new CollSurplusPool(address(_collToken));
     contracts.defaultPool = new DefaultPool(address(_collToken));
     contracts.gasPool = new GasPool();
@@ -338,7 +335,24 @@ function _deployAndConnectCollateralContractsDev(
     contracts.sortedTroves = new SortedTroves();
     contracts.stabilityPool = new StabilityPool(address(_collToken));
     contracts.interestRouter = new MockInterestRouter();
-    TroveManager.ConstructorVars memory vars = TroveManager.ConstructorVars({
+    BorrowerOperations.ConstructorVars memory borrowerOperationsVars = BorrowerOperations.ConstructorVars({
+        ccr: _troveManagerParams.CCR,
+        mcr: _troveManagerParams.MCR,
+        scr: _troveManagerParams.SCR,
+        collToken: _collToken,
+        troveNFT: contracts.troveNFT,
+        activePool: contracts.activePool,
+        defaultPool: contracts.defaultPool,
+        gasPoolAddress: address(contracts.gasPool),
+        collSurplusPool: contracts.collSurplusPool,
+        priceFeed: contracts.priceFeed,
+        sortedTroves: contracts.sortedTroves,
+        boldToken: _boldToken,
+        weth: _weth
+        });
+    contracts.borrowerOperations = new BorrowerOperationsTester(borrowerOperationsVars);
+
+    TroveManager.ConstructorVars memory troveManagerVars = TroveManager.ConstructorVars({
         liquidationPenaltySP: _troveManagerParams.LIQUIDATION_PENALTY_SP,
         liquidationPenaltyRedistribution: _troveManagerParams.LIQUIDATION_PENALTY_REDISTRIBUTION,
         troveNFT: contracts.troveNFT,
@@ -349,12 +363,12 @@ function _deployAndConnectCollateralContractsDev(
         gasPoolAddress: address(contracts.gasPool),
         collSurplusPool: contracts.collSurplusPool,
         priceFeed: contracts.priceFeed,
-        boldToken: _boldToken,
         sortedTroves: contracts.sortedTroves,
+        boldToken: _boldToken,
         weth: _weth,
         collateralRegistry: _collateralRegistry
     });
-    contracts.troveManager = new TroveManagerTester(vars);
+    contracts.troveManager = new TroveManagerTester(troveManagerVars);
 
     // Pass the bare contract interfaces to the connector func
     connectContracts(_branch, _boldToken, _weth, _collateralRegistry, _devToMainnet(contracts));
@@ -377,31 +391,39 @@ function _devToMainnet(LiquityContractsDev memory contractsDev) pure returns (Li
 
 function _deployAndConnectCollateralContractsMainnet(
     uint256 _branch,
-    IERC20 _collateralToken,
+    IERC20 _collToken,
     IBoldToken _boldToken,
     ICollateralRegistry _collateralRegistry,
     IPriceFeed _priceFeed,
     TroveManagerParams memory _troveManagerParams,
     IWETH _weth
 ) returns (LiquityContracts memory contracts) {
-    contracts.activePool = new ActivePool(address(_collateralToken));
+    contracts.activePool = new ActivePool(address(_collToken));
     contracts.troveNFT = new TroveNFT();
-    contracts.borrowerOperations = new BorrowerOperations(
-        _troveManagerParams.CCR,
-        _troveManagerParams.MCR,
-        _troveManagerParams.SCR,
-        _collateralToken,
-        contracts.troveNFT,
-        _weth
-    );
-    contracts.collSurplusPool = new CollSurplusPool(address(_collateralToken));
-    contracts.defaultPool = new DefaultPool(address(_collateralToken));
+    contracts.collSurplusPool = new CollSurplusPool(address(_collToken));
+    contracts.defaultPool = new DefaultPool(address(_collToken));
     contracts.gasPool = new GasPool();
     contracts.priceFeed = _priceFeed;
     contracts.sortedTroves = new SortedTroves();
-    contracts.stabilityPool = new StabilityPool(address(_collateralToken));
+    contracts.stabilityPool = new StabilityPool(address(_collToken));
     contracts.interestRouter = new MockInterestRouter();
-    TroveManager.ConstructorVars memory vars = TroveManager.ConstructorVars({
+    BorrowerOperations.ConstructorVars memory borrowerOperationsVars = BorrowerOperations.ConstructorVars({
+        ccr: _troveManagerParams.CCR,
+        mcr: _troveManagerParams.MCR,
+        scr: _troveManagerParams.SCR,
+        collToken: _collToken,
+        troveNFT: contracts.troveNFT,
+        activePool: contracts.activePool,
+        defaultPool: contracts.defaultPool,
+        gasPoolAddress: address(contracts.gasPool),
+        collSurplusPool: contracts.collSurplusPool,
+        priceFeed: contracts.priceFeed,
+        sortedTroves: contracts.sortedTroves,
+        boldToken: _boldToken,
+        weth: _weth
+        });
+    contracts.borrowerOperations = new BorrowerOperations(borrowerOperationsVars);
+    TroveManager.ConstructorVars memory troveManagerVars = TroveManager.ConstructorVars({
         liquidationPenaltySP: _troveManagerParams.LIQUIDATION_PENALTY_SP,
         liquidationPenaltyRedistribution: _troveManagerParams.LIQUIDATION_PENALTY_REDISTRIBUTION,
         troveNFT: contracts.troveNFT,
@@ -412,12 +434,12 @@ function _deployAndConnectCollateralContractsMainnet(
         gasPoolAddress: address(contracts.gasPool),
         collSurplusPool: contracts.collSurplusPool,
         priceFeed: contracts.priceFeed,
-        boldToken: _boldToken,
         sortedTroves: contracts.sortedTroves,
+        boldToken: _boldToken,
         weth: _weth,
         collateralRegistry: _collateralRegistry
     });
-    contracts.troveManager = new TroveManager(vars);
+    contracts.troveManager = new TroveManager(troveManagerVars);
 
     connectContracts(_branch, _boldToken, _weth, _collateralRegistry, contracts);
 }
@@ -442,16 +464,7 @@ function connectContracts(
     contracts.sortedTroves.setAddresses(address(contracts.troveManager), address(contracts.borrowerOperations));
 
     // set contracts in BorrowerOperations
-    contracts.borrowerOperations.setAddresses(
-        address(contracts.troveManager),
-        address(contracts.activePool),
-        address(contracts.defaultPool),
-        address(contracts.gasPool),
-        address(contracts.collSurplusPool),
-        address(contracts.priceFeed),
-        address(contracts.sortedTroves),
-        address(_boldToken)
-    );
+    contracts.borrowerOperations.setAddresses(contracts.troveManager);
 
     // set contracts in the Pools
     contracts.stabilityPool.setAddresses(

@@ -98,7 +98,10 @@ contract ShutdownTest is DevTestSetup {
             0, // _upperHint
             0, // _lowerHint
             _annualInterestRate,
-            upfrontFee
+            upfrontFee,
+            address(0),
+            address(0),
+            address(0)
         );
 
         vm.stopPrank();
@@ -171,7 +174,7 @@ contract ShutdownTest is DevTestSetup {
 
         vm.startPrank(B);
         vm.expectRevert(BorrowerOperations.IsShutDown.selector);
-        borrowerOperations.openTrove(B, 0, 20e18, 5000e18, 0, 0, 5e16, 10000e18);
+        borrowerOperations.openTrove(B, 0, 20e18, 5000e18, 0, 0, 5e16, 10000e18, address(0), address(0), address(0));
         vm.stopPrank();
     }
 

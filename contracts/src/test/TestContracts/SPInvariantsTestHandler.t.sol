@@ -103,7 +103,7 @@ contract SPInvariantsTestHandler is BaseHandler {
         vm.prank(msg.sender);
         collateralToken.approve(address(borrowerOperations), coll + ETH_GAS_COMPENSATION);
         vm.prank(msg.sender);
-        uint256 troveId = borrowerOperations.openTrove(msg.sender, i + 1, coll, borrowed, 0, 0, MIN_ANNUAL_INTEREST_RATE, type(uint256).max);
+        uint256 troveId = borrowerOperations.openTrove(msg.sender, i + 1, coll, borrowed, 0, 0, MIN_ANNUAL_INTEREST_RATE, type(uint256).max, address(0), address(0), address(0));
         (uint256 actualDebt,,,,) = TroveManagerTester(address(troveManager)).getEntireDebtAndColl(troveId);
         assertEqDecimal(debt, actualDebt, 18, "Wrong debt");
 
