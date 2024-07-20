@@ -74,7 +74,9 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
     }
 
     struct LocalVariables_openTrove {
-        ContractsCacheTMAPBT contractsCache;
+        ITroveManager troveManager;
+        IActivePool activePool;
+        IBoldToken boldToken;
         uint256 troveId;
         uint256 price;
         uint256 avgInterestRate;
@@ -84,6 +86,8 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
     }
 
     struct LocalVariables_adjustTrove {
+        IActivePool activePool;
+        IBoldToken boldToken;
         LatestTroveData trove;
         uint256 price;
         bool isBelowCriticalThreshold;
@@ -109,12 +113,6 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         LatestTroveData trove;
         LatestBatchData batch;
         uint256 newBatchDebt;
-    }
-
-    struct ContractsCacheTMAPBT {
-        ITroveManager troveManager;
-        IActivePool activePool;
-        IBoldToken boldToken;
     }
 
     error InvalidCCR();
@@ -338,7 +336,9 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         LocalVariables_openTrove memory vars;
 
         // TODO: stack too deep not allowing to reuse troveManager from outer functions
-        vars.contractsCache = ContractsCacheTMAPBT(troveManager, activePool, boldToken);
+        vars.troveManager = troveManager;
+        vars.activePool = activePool;
+        vars.boldToken = boldToken;
 
         vars.price = priceFeed.fetchPrice();
 
@@ -347,7 +347,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         _requireNotBelowCriticalThreshold(vars.price);
 
         vars.troveId = uint256(keccak256(abi.encode(_owner, _ownerIndex)));
-        _requireTroveIsNotOpen(vars.contractsCache.troveManager, vars.troveId);
+        _requireTroveIsNotOpen(vars.troveManager, vars.troveId);
 
         _troveChange.collIncrease = _collAmount;
         _troveChange.debtIncrease = _boldAmount;
@@ -355,7 +355,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         // For simplicity, we ignore the fee when calculating the approx. interest rate
         _troveChange.newWeightedRecordedDebt = _troveChange.debtIncrease * _annualInterestRate;
 
-        vars.avgInterestRate = vars.contractsCache.activePool.getNewApproxAvgInterestRateFromTroveChange(_troveChange);
+        vars.avgInterestRate = vars.activePool.getNewApproxAvgInterestRateFromTroveChange(_troveChange);
         _troveChange.upfrontFee = _calcUpfrontFee(_troveChange.debtIncrease, vars.avgInterestRate);
         _requireUserAcceptsUpfrontFee(_troveChange.upfrontFee, _maxUpfrontFee);
 
@@ -389,13 +389,13 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
             _setRemoveManager(vars.troveId, _removeManager, _receiver);
         }
 
-        vars.contractsCache.activePool.mintAggInterestAndAccountForTroveChange(_troveChange, _interestBatchManager);
+        vars.activePool.mintAggInterestAndAccountForTroveChange(_troveChange, _interestBatchManager);
 
         // Pull coll tokens from sender and move them to the Active Pool
-        _pullCollAndSendToActivePool(vars.contractsCache.activePool, _collAmount);
+        _pullCollAndSendToActivePool(vars.activePool, _collAmount);
 
         // Mint the requested _boldAmount to the borrower and mint the gas comp to the GasPool
-        vars.contractsCache.boldToken.mint(msg.sender, _boldAmount);
+        vars.boldToken.mint(msg.sender, _boldAmount);
         WETH.transferFrom(msg.sender, gasPoolAddress, ETH_GAS_COMPENSATION);
 
         return vars.troveId;
@@ -403,14 +403,14 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
 
     // Send collateral to a trove
     function addColl(uint256 _troveId, uint256 _collAmount) external override {
-        ContractsCacheTMAPBT memory contractsCache = ContractsCacheTMAPBT(troveManager, activePool, boldToken);
-        _requireTroveIsActive(contractsCache.troveManager, _troveId);
+        ITroveManager troveManagerCached = troveManager;
+        _requireTroveIsActive(troveManagerCached, _troveId);
 
         TroveChange memory troveChange;
         troveChange.collIncrease = _collAmount;
 
         _adjustTrove(
-            contractsCache,
+            troveManagerCached,
             _troveId,
             troveChange,
             0 // _maxUpfrontFee
@@ -419,14 +419,14 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
 
     // Withdraw collateral from a trove
     function withdrawColl(uint256 _troveId, uint256 _collWithdrawal) external override {
-        ContractsCacheTMAPBT memory contractsCache = ContractsCacheTMAPBT(troveManager, activePool, boldToken);
-        _requireTroveIsActive(contractsCache.troveManager, _troveId);
+        ITroveManager troveManagerCached = troveManager;
+        _requireTroveIsActive(troveManagerCached, _troveId);
 
         TroveChange memory troveChange;
         troveChange.collDecrease = _collWithdrawal;
 
         _adjustTrove(
-            contractsCache,
+            troveManagerCached,
             _troveId,
             troveChange,
             0 // _maxUpfrontFee
@@ -435,24 +435,24 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
 
     // Withdraw Bold tokens from a trove: mint new Bold tokens to the owner, and increase the trove's debt accordingly
     function withdrawBold(uint256 _troveId, uint256 _boldAmount, uint256 _maxUpfrontFee) external override {
-        ContractsCacheTMAPBT memory contractsCache = ContractsCacheTMAPBT(troveManager, activePool, boldToken);
-        _requireTroveIsActive(contractsCache.troveManager, _troveId);
+        ITroveManager troveManagerCached = troveManager;
+        _requireTroveIsActive(troveManagerCached, _troveId);
 
         TroveChange memory troveChange;
         troveChange.debtIncrease = _boldAmount;
-        _adjustTrove(contractsCache, _troveId, troveChange, _maxUpfrontFee);
+        _adjustTrove(troveManagerCached, _troveId, troveChange, _maxUpfrontFee);
     }
 
     // Repay Bold tokens to a Trove: Burn the repaid Bold tokens, and reduce the trove's debt accordingly
     function repayBold(uint256 _troveId, uint256 _boldAmount) external override {
-        ContractsCacheTMAPBT memory contractsCache = ContractsCacheTMAPBT(troveManager, activePool, boldToken);
-        _requireTroveIsActive(contractsCache.troveManager, _troveId);
+        ITroveManager troveManagerCached = troveManager;
+        _requireTroveIsActive(troveManagerCached, _troveId);
 
         TroveChange memory troveChange;
         troveChange.debtDecrease = _boldAmount;
 
         _adjustTrove(
-            contractsCache,
+            troveManagerCached,
             _troveId,
             troveChange,
             0 // _maxUpfrontFee
@@ -487,12 +487,12 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         bool _isDebtIncrease,
         uint256 _maxUpfrontFee
     ) external override {
-        ContractsCacheTMAPBT memory contractsCache = ContractsCacheTMAPBT(troveManager, activePool, boldToken);
-        _requireTroveIsActive(contractsCache.troveManager, _troveId);
+        ITroveManager troveManagerCached = troveManager;
+        _requireTroveIsActive(troveManagerCached, _troveId);
 
         TroveChange memory troveChange;
         _initTroveChange(troveChange, _collChange, _isCollIncrease, _boldChange, _isDebtIncrease);
-        _adjustTrove(contractsCache, _troveId, troveChange, _maxUpfrontFee);
+        _adjustTrove(troveManagerCached, _troveId, troveChange, _maxUpfrontFee);
     }
 
     function adjustUnredeemableTrove(
@@ -505,23 +505,23 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         uint256 _lowerHint,
         uint256 _maxUpfrontFee
     ) external override {
-        ContractsCacheTMAPBT memory contractsCache = ContractsCacheTMAPBT(troveManager, activePool, boldToken);
-        _requireTroveIsUnredeemable(contractsCache.troveManager, _troveId);
+        ITroveManager troveManagerCached = troveManager;
+        _requireTroveIsUnredeemable(troveManagerCached, _troveId);
 
         TroveChange memory troveChange;
         _initTroveChange(troveChange, _collChange, _isCollIncrease, _boldChange, _isDebtIncrease);
-        _adjustTrove(contractsCache, _troveId, troveChange, _maxUpfrontFee);
+        _adjustTrove(troveManagerCached, _troveId, troveChange, _maxUpfrontFee);
 
-        contractsCache.troveManager.setTroveStatusToActive(_troveId);
+        troveManagerCached.setTroveStatusToActive(_troveId);
 
         // If it was in a batch, we need to put it back, otherwise we insert it normally
         address batchManager = interestBatchManagerOf[_troveId];
         if (batchManager == address(0)) {
             sortedTroves.insert(
-                _troveId, contractsCache.troveManager.getTroveAnnualInterestRate(_troveId), _upperHint, _lowerHint
+                _troveId, troveManagerCached.getTroveAnnualInterestRate(_troveId), _upperHint, _lowerHint
             );
         } else {
-            LatestBatchData memory batch = contractsCache.troveManager.getLatestBatchData(batchManager);
+            LatestBatchData memory batch = troveManagerCached.getLatestBatchData(batchManager);
             sortedTroves.insertIntoBatch(
                 _troveId, BatchId.wrap(batchManager), batch.annualInterestRate, _upperHint, _lowerHint
             );
@@ -579,7 +579,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
     * _adjustTrove(): Alongside a debt change, this function can perform either a collateral top-up or a collateral withdrawal.
     */
     function _adjustTrove(
-        ContractsCacheTMAPBT memory _contractsCache,
+        ITroveManager _troveManager,
         uint256 _troveId,
         TroveChange memory _troveChange,
         uint256 _maxUpfrontFee
@@ -587,6 +587,8 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         _requireIsNotShutDown();
 
         LocalVariables_adjustTrove memory vars;
+        vars.activePool = activePool;
+        vars.boldToken = boldToken;
 
         vars.price = priceFeed.fetchPrice();
         vars.isBelowCriticalThreshold = _checkBelowCriticalThreshold(vars.price, CCR);
@@ -594,7 +596,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         // --- Checks ---
 
         _requireNonZeroAdjustment(_troveChange);
-        _requireTroveIsOpen(_contractsCache.troveManager, _troveId);
+        _requireTroveIsOpen(_troveManager, _troveId);
 
         address owner = troveNFT.ownerOf(_troveId);
         address receiver = owner; // If it’s a withdrawal, and manager has receive privilege, manager would be the receiver
@@ -607,12 +609,12 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
             _requireSenderIsOwnerOrAddManager(_troveId, owner);
         }
 
-        vars.trove = _contractsCache.troveManager.getLatestTroveData(_troveId);
+        vars.trove = _troveManager.getLatestTroveData(_troveId);
 
         // When the adjustment is a debt repayment, check it's a valid amount and that the caller has enough Bold
         if (_troveChange.debtDecrease > 0) {
             _requireValidBoldRepayment(vars.trove.entireDebt, _troveChange.debtDecrease);
-            _requireSufficientBoldBalance(_contractsCache.boldToken, msg.sender, _troveChange.debtDecrease);
+            _requireSufficientBoldBalance(vars.boldToken, msg.sender, _troveChange.debtDecrease);
         }
 
         // When the adjustment is a collateral withdrawal, check that it's no more than the Trove's entire collateral
@@ -628,7 +630,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         LatestBatchData memory batch;
         uint256 batchFutureDebt;
         if (isTroveInBatch) {
-            batch = _contractsCache.troveManager.getLatestBatchData(batchManager);
+            batch = _troveManager.getLatestBatchData(batchManager);
 
             batchFutureDebt =
                 batch.entireDebtWithoutRedistribution + _troveChange.debtIncrease - _troveChange.debtDecrease;
@@ -651,7 +653,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         // Pay an upfront fee on debt increases
         if (_troveChange.debtIncrease > 0) {
             uint256 avgInterestRate =
-                _contractsCache.activePool.getNewApproxAvgInterestRateFromTroveChange(_troveChange);
+                vars.activePool.getNewApproxAvgInterestRateFromTroveChange(_troveChange);
             _troveChange.upfrontFee = _calcUpfrontFee(_troveChange.debtIncrease, avgInterestRate);
             _requireUserAcceptsUpfrontFee(_troveChange.upfrontFee, _maxUpfrontFee);
 
@@ -679,7 +681,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         // --- Effects and interactions ---
 
         if (isTroveInBatch) {
-            _contractsCache.troveManager.onAdjustTroveInsideBatch(
+            _troveManager.onAdjustTroveInsideBatch(
                 _troveId,
                 vars.newColl,
                 _troveChange,
@@ -688,11 +690,11 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
                 batch.entireDebtWithoutRedistribution
             );
         } else {
-            _contractsCache.troveManager.onAdjustTrove(_troveId, vars.newColl, vars.newDebt, _troveChange);
+            _troveManager.onAdjustTrove(_troveId, vars.newColl, vars.newDebt, _troveChange);
         }
 
-        _contractsCache.activePool.mintAggInterestAndAccountForTroveChange(_troveChange, batchManager);
-        _moveTokensFromAdjustment(receiver, _troveChange, _contractsCache);
+        vars.activePool.mintAggInterestAndAccountForTroveChange(_troveChange, batchManager);
+        _moveTokensFromAdjustment(receiver, _troveChange, vars.boldToken, vars.activePool);
     }
 
     function closeTrove(uint256 _troveId) external override returns (uint256) {
@@ -1200,20 +1202,21 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
     function _moveTokensFromAdjustment(
         address withdrawalReceiver,
         TroveChange memory _troveChange,
-        ContractsCacheTMAPBT memory _contractsCache
+        IBoldToken _boldToken,
+        IActivePool _activePool
     ) internal {
         if (_troveChange.debtIncrease > 0) {
-            _contractsCache.boldToken.mint(withdrawalReceiver, _troveChange.debtIncrease);
+            _boldToken.mint(withdrawalReceiver, _troveChange.debtIncrease);
         } else if (_troveChange.debtDecrease > 0) {
-            _contractsCache.boldToken.burn(msg.sender, _troveChange.debtDecrease);
+            _boldToken.burn(msg.sender, _troveChange.debtDecrease);
         }
 
         if (_troveChange.collIncrease > 0) {
             // Pull coll tokens from sender and move them to the Active Pool
-            _pullCollAndSendToActivePool(_contractsCache.activePool, _troveChange.collIncrease);
+            _pullCollAndSendToActivePool(_activePool, _troveChange.collIncrease);
         } else if (_troveChange.collDecrease > 0) {
             // Pull Coll from Active Pool and decrease its recorded Coll balance
-            _contractsCache.activePool.sendColl(withdrawalReceiver, _troveChange.collDecrease);
+            _activePool.sendColl(withdrawalReceiver, _troveChange.collDecrease);
         }
     }
 
