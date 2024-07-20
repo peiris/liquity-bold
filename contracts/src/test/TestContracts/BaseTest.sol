@@ -416,7 +416,12 @@ contract BaseTest is TestAccounts {
     ) internal returns (uint256) {
         if (!borrowerOperations.checkBatchManagerExists(_batchAddress)) {
             registerBatchManager(
-                _batchAddress, uint128(1e16), uint128(20e16), uint128(_annualInterestRate), uint128(25e14), uint128(0)
+                _batchAddress,
+                uint128(LiquityMath._min(1e16, _annualInterestRate)),
+                uint128(LiquityMath._max(20e16, _annualInterestRate)),
+                uint128(_annualInterestRate),
+                uint128(25e14),
+                uint128(0)
             );
         }
 

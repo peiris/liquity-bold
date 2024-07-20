@@ -1802,12 +1802,8 @@ contract InvariantsTestHandler is BaseHandler, BaseMultiCollateralTest {
                 return (selector, "BorrowerOperations.TroveInBatch()");
             }
 
-            if (selector == BorrowerOperations.InterestNotInDelegateRange.selector) {
-                return (selector, "BorrowerOperations.InterestNotInDelegateRange()");
-            }
-
-            if (selector == BorrowerOperations.InterestNotInBatchRange.selector) {
-                return (selector, "BorrowerOperations.InterestNotInBatchRange()");
+            if (selector == BorrowerOperations.InterestNotInRange.selector) {
+                return (selector, "BorrowerOperations.InterestNotInRange()");
             }
 
             if (selector == BorrowerOperations.BatchInterestRateChangePeriodNotPassed.selector) {

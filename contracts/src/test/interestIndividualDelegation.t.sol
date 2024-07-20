@@ -86,7 +86,7 @@ contract InterestIndividualDelegationTest is DevTestSetup {
         uint256 troveId = openTroveAndSetIndividualDelegate();
 
         vm.startPrank(B);
-        vm.expectRevert(BorrowerOperations.InterestNotInDelegateRange.selector);
+        vm.expectRevert(BorrowerOperations.InterestNotInRange.selector);
         borrowerOperations.adjustTroveInterestRate(troveId, MIN_ANNUAL_INTEREST_RATE, 0, 0, 1e24);
         vm.stopPrank();
     }
@@ -95,7 +95,7 @@ contract InterestIndividualDelegationTest is DevTestSetup {
         uint256 troveId = openTroveAndSetIndividualDelegate();
 
         vm.startPrank(B);
-        vm.expectRevert(BorrowerOperations.InterestNotInDelegateRange.selector);
+        vm.expectRevert(BorrowerOperations.InterestNotInRange.selector);
         borrowerOperations.adjustTroveInterestRate(troveId, 50e16, 0, 0, 1e24);
         vm.stopPrank();
     }

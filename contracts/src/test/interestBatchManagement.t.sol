@@ -238,9 +238,9 @@ contract InterestBatchManagementTest is DevTestSetup {
         openTroveAndJoinBatchManager();
 
         vm.startPrank(B);
-        //vm.expectRevert("Interest rate must not be lower than min");
-        //borrowerOperations.setBatchManagerAnnualInterestRate(0, 0, 0, 100000e18);
-        vm.expectRevert(BorrowerOperations.InterestRateTooHigh.selector);
+        vm.expectRevert(BorrowerOperations.InterestNotInRange.selector);
+        borrowerOperations.setBatchManagerAnnualInterestRate(0, 0, 0, 100000e18);
+        vm.expectRevert(BorrowerOperations.InterestNotInRange.selector);
         borrowerOperations.setBatchManagerAnnualInterestRate(2e18, 0, 0, 100000e18);
         vm.stopPrank();
     }
@@ -249,9 +249,9 @@ contract InterestBatchManagementTest is DevTestSetup {
         openTroveAndJoinBatchManager();
 
         vm.startPrank(B);
-        vm.expectRevert(BorrowerOperations.InterestNotInBatchRange.selector);
+        vm.expectRevert(BorrowerOperations.InterestNotInRange.selector);
         borrowerOperations.setBatchManagerAnnualInterestRate(uint128(MIN_ANNUAL_INTEREST_RATE), 0, 0, 100000e18);
-        vm.expectRevert(BorrowerOperations.InterestNotInBatchRange.selector);
+        vm.expectRevert(BorrowerOperations.InterestNotInRange.selector);
         borrowerOperations.setBatchManagerAnnualInterestRate(21e16, 0, 0, 100000e18);
         vm.stopPrank();
     }

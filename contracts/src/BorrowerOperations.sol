@@ -145,8 +145,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
     error ZeroAdjustment();
     error NotOwnerNorInterestManager();
     error TroveInBatch();
-    error InterestNotInDelegateRange();
-    error InterestNotInBatchRange();
+    error InterestNotInRange();
     error BatchInterestRateChangePeriodNotPassed();
     error TroveNotOpen();
     error TroveNotActive();
@@ -169,7 +168,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
     error BatchManagerNotNew();
     error NewFeeNotLower();
     error CallerNotPriceFeed();
-    error MaxGtMin();
+    error MinGeMax();
 
     event TroveManagerAddressChanged(address _newTroveManagerAddress);
     event ActivePoolAddressChanged(address _activePoolAddress);
@@ -884,24 +883,25 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
     }
 
     function registerBatchManager(
-        uint128 minInterestRate,
-        uint128 maxInterestRate,
-        uint128 currentInterestRate,
-        uint128 annualManagementFee,
-        uint128 minInterestRateChangePeriod
+        uint128 _minInterestRate,
+        uint128 _maxInterestRate,
+        uint128 _currentInterestRate,
+        uint128 _annualManagementFee,
+        uint128 _minInterestRateChangePeriod
     ) external {
         _requireNonExistentInterestBatchManager(msg.sender);
-        _requireValidAnnualInterestRate(minInterestRate);
-        _requireValidAnnualInterestRate(maxInterestRate);
-        _requireValidAnnualInterestRate(currentInterestRate);
-        if (minInterestRate >= maxInterestRate) {
-            revert MaxGtMin();
-        }
+        _requireValidAnnualInterestRate(_minInterestRate);
+        _requireValidAnnualInterestRate(_maxInterestRate);
+        // With the check below, it could only be ==
+        if (_minInterestRate >= _maxInterestRate) { revert MinGeMax(); }
+        _requireInterestRateInRange(_currentInterestRate, _minInterestRate, _maxInterestRate);
+        // Not needed, implicitly checked in the condition above:
+        //_requireValidAnnualInterestRate(_currentInterestRate);
 
         interestBatchManagers[msg.sender] =
-            InterestBatchManager(minInterestRate, maxInterestRate, minInterestRateChangePeriod);
+            InterestBatchManager(_minInterestRate, _maxInterestRate, _minInterestRateChangePeriod);
 
-        troveManager.onRegisterBatchManager(msg.sender, currentInterestRate, annualManagementFee);
+        troveManager.onRegisterBatchManager(msg.sender, _currentInterestRate, _annualManagementFee);
     }
 
     function lowerBatchManagementFee(uint256 _newAnnualManagementFee) external {
@@ -939,8 +939,10 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         uint256 _maxUpfrontFee
     ) external {
         _requireValidInterestBatchManager(msg.sender);
-        _requireValidAnnualInterestRate(_newAnnualInterestRate);
         _requireInterestRateInBatchManagerRange(msg.sender, _newAnnualInterestRate);
+        // Not needed, implicitly checked in the condition above:
+        //_requireValidAnnualInterestRate(_newAnnualInterestRate);
+
 
         ContractsCacheTMAP memory contractsCache = ContractsCacheTMAP(troveManager, activePool);
         LatestBatchData memory batch = contractsCache.troveManager.getLatestBatchData(msg.sender);
@@ -1301,14 +1303,8 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
 
     function _requireInterestRateInDelegateRange(uint256 _troveId, uint256 _annualInterestRate) internal view {
         InterestIndividualDelegate memory individualDelegate = interestIndividualDelegateOf[_troveId];
-        if (
-            individualDelegate.account != address(0)
-                && (
-                    individualDelegate.minInterestRate > _annualInterestRate
-                        || _annualInterestRate > individualDelegate.maxInterestRate
-                )
-        ) {
-            revert InterestNotInDelegateRange();
+        if (individualDelegate.account != address(0)) {
+            _requireInterestRateInRange(_annualInterestRate, individualDelegate.minInterestRate, individualDelegate.maxInterestRate);
         }
     }
 
@@ -1317,11 +1313,15 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         view
     {
         InterestBatchManager memory interestBatchManager = interestBatchManagers[_interestBatchManagerAddress];
-        if (
-            interestBatchManager.minInterestRate > _annualInterestRate
-                || _annualInterestRate > interestBatchManager.maxInterestRate
-        ) {
-            revert InterestNotInBatchRange();
+        _requireInterestRateInRange(_annualInterestRate, interestBatchManager.minInterestRate, interestBatchManager.maxInterestRate);
+    }
+
+    function _requireInterestRateInRange(uint256 _annualInterestRate, uint256 _minInterestRate, uint256 _maxInterestRate)
+        internal
+        pure
+    {
+        if (_minInterestRate > _annualInterestRate || _annualInterestRate > _maxInterestRate) {
+            revert InterestNotInRange();
         }
     }
 
