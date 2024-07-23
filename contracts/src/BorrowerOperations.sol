@@ -1145,6 +1145,10 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         return _troveEntireDebt;
     }
 
+    function _calcUpfrontFee(uint256 _debt, uint256 _avgInterestRate) internal pure returns (uint256) {
+        return _calcInterest(_debt * _avgInterestRate, UPFRONT_INTEREST_PERIOD);
+    }
+
     /**
      * Claim remaining collateral from a liquidation with ICR exceeding the liquidation penalty
      */

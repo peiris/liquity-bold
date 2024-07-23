@@ -126,6 +126,10 @@ contract TroveManagerTester is ITroveManagerTester, TroveManager {
         return _calcUpfrontFee(openTrove.debtIncrease, avgInterestRate);
     }
 
+    function _calcUpfrontFee(uint256 _debt, uint256 _avgInterestRate) internal pure returns (uint256) {
+        return _calcInterest(_debt * _avgInterestRate, UPFRONT_INTEREST_PERIOD);
+    }
+
     function getEffectiveRedemptionFeeInColl(uint256 _redeemAmount, uint256 _price) external view returns (uint256) {
         return collateralRegistry.getEffectiveRedemptionFeeInBold(_redeemAmount) * DECIMAL_PRECISION / _price;
     }
