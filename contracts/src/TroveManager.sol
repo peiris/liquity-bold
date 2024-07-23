@@ -124,15 +124,6 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     * in order to avoid the error: "CompilerError: Stack too deep".
     **/
 
-    struct LocalVariables_LiquidationSequence {
-        uint256 remainingBoldInStabPool;
-        uint256 i;
-        uint256 ICR;
-        uint256 troveId;
-        uint256 entireSystemDebt;
-        uint256 entireSystemColl;
-    }
-
     struct LiquidationValues {
         uint256 collGasCompensation;
         uint256 debtToOffset;
@@ -504,24 +495,22 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         LiquidationValues memory totals,
         TroveChange memory troveChange
     ) internal {
-        LocalVariables_LiquidationSequence memory vars;
+        uint256 remainingBoldInStabPool = _boldInStabPool;
 
-        vars.remainingBoldInStabPool = _boldInStabPool;
-
-        for (vars.i = 0; vars.i < _troveArray.length; vars.i++) {
-            vars.troveId = _troveArray[vars.i];
+        for (uint256 i = 0; i < _troveArray.length; i++) {
+            uint256 troveId = _troveArray[i];
 
             // Skip non-liquidatable troves
-            if (!_isLiquidatableStatus(Troves[vars.troveId].status)) continue;
+            if (!_isLiquidatableStatus(Troves[troveId].status)) continue;
 
-            vars.ICR = getCurrentICR(vars.troveId, _price);
+            uint256 ICR = getCurrentICR(troveId, _price);
 
-            if (vars.ICR < MCR) {
+            if (ICR < MCR) {
                 LiquidationValues memory singleLiquidation;
                 LatestTroveData memory trove;
 
-                _liquidate(_defaultPool, vars.troveId, vars.remainingBoldInStabPool, _price, trove, singleLiquidation);
-                vars.remainingBoldInStabPool -= singleLiquidation.debtToOffset;
+                _liquidate(_defaultPool, troveId, remainingBoldInStabPool, _price, trove, singleLiquidation);
+                remainingBoldInStabPool -= singleLiquidation.debtToOffset;
 
                 // Add liquidation values to their respective running totals
                 _addLiquidationValuesToTotals(trove, singleLiquidation, singleLiquidation.oldWeightedRecordedDebt, singleLiquidation.newWeightedRecordedDebt, totals, troveChange);
