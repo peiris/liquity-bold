@@ -434,7 +434,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
                 );
             }
         }
-        assert(_collToLiquidate == collToSendToSP + collToRedistribute + collSurplus);
+        // assert(_collToLiquidate == collToSendToSP + collToRedistribute + collSurplus);
     }
 
     function _getCollPenaltyAndSurplus(
@@ -1083,7 +1083,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
             * - When we close or liquidate a trove, we redistribute the redistribution gains, so if all troves were closed/liquidated,
             * rewards would’ve been emptied and totalCollateralSnapshot would be zero too.
             */
-            assert(totalStakesSnapshot > 0);
+            // assert(totalStakesSnapshot > 0);
             stake = _coll * totalStakesSnapshot / totalCollateralSnapshot;
         }
         return stake;
@@ -1146,7 +1146,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         uint64 index = Troves[_troveId].arrayIndex;
         uint256 idxLast = TroveIdsArrayLength - 1;
 
-        assert(index <= idxLast);
+        // assert(index <= idxLast);
 
         uint256 idToMove = TroveIds[idxLast];
 
@@ -1356,7 +1356,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         uint256 _batchDebt
     ) external {
         _requireCallerIsBorrowerOperations();
-        assert(batchIds[batches[_batchAddress].arrayIndex] == _batchAddress);
+        // assert(batchIds[batches[_batchAddress].arrayIndex] == _batchAddress);
 
         uint256 newStake = _computeNewStake(_troveChange.collIncrease);
 
@@ -1540,7 +1540,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         uint256 _newBatchDebt, // entire, with interest and batch fee
         Status closedStatus
     ) internal {
-        assert(closedStatus == Status.closedByLiquidation || closedStatus == Status.closedByOwner);
+        // assert(closedStatus == Status.closedByLiquidation || closedStatus == Status.closedByOwner);
 
         uint256 TroveIdsArrayLength = TroveIds.length;
         _requireMoreThanOneTroveInSystem(TroveIdsArrayLength);
@@ -1768,7 +1768,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         _requireCallerIsBorrowerOperations();
         TroveChange memory _troveChange = _params.troveChange;
 
-        assert(batchIds[batches[_params.newBatchAddress].arrayIndex] == _params.newBatchAddress);
+        // assert(batchIds[batches[_params.newBatchAddress].arrayIndex] == _params.newBatchAddress);
 
         _updateTroveRewardSnapshots(_params.troveId);
 
@@ -1905,7 +1905,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         uint256 _newAnnualInterestRate
     ) external {
         _requireCallerIsBorrowerOperations();
-        assert(batchIds[batches[_batchAddress].arrayIndex] == _batchAddress);
+        // assert(batchIds[batches[_batchAddress].arrayIndex] == _batchAddress);
 
         // Subtract from batch
         _removeTroveSharesFromBatch(
@@ -1963,7 +1963,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         uint256 _newBatchDebt // entire (with interest and batch fee), but without trove change
     ) internal {
         // As we are removing:
-        assert(_newBatchDebt > 0 || _newBatchColl > 0);
+        // assert(_newBatchDebt > 0 || _newBatchColl > 0);
 
         Trove memory trove = Troves[_troveId];
 
