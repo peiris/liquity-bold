@@ -46,10 +46,6 @@ interface ITroveManager is ILiquityBase {
 
     function getTroveIdsCount() external view returns (uint256);
 
-    function getTCR(uint256 _price) external view returns (uint256);
-
-    function checkBelowCriticalThreshold(uint256 _price) external view returns (bool);
-
     function getTroveFromTroveIdsArray(uint256 _index) external view returns (uint256);
 
     function getCurrentICR(uint256 _troveId, uint256 _price) external view returns (uint256);

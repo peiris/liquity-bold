@@ -24,6 +24,10 @@ interface ITroveManagerTester is ITroveManager {
     function getTotalCollateralSnapshot() external view returns (uint256);
     function getTroveId(uint256 _index) external view returns (uint256);
 
+    function getTCR(uint256 _price) external view returns (uint256);
+
+    function checkBelowCriticalThreshold(uint256 _price) external view returns (bool);
+
     function computeICR(uint256 _coll, uint256 _debt, uint256 _price) external pure returns (uint256);
     function getCollGasCompensation(uint256 _coll) external pure returns (uint256);
 
