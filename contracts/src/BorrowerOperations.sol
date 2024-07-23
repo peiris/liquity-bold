@@ -805,7 +805,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         trove = troveManagerCached.getLatestTroveData(_troveId);
 
         // If the trove was unredeemable, and now it’s not anymore, put it back in the list
-        if (troveManagerCached.checkTroveIsUnredeemable(_troveId) && trove.entireDebt >= MIN_DEBT) {
+        if (_checkTroveIsUnredeemable(troveManagerCached, _troveId) && trove.entireDebt >= MIN_DEBT) {
             troveManagerCached.setTroveStatusToActive(_troveId);
             sortedTroves.insert(_troveId, trove.annualInterestRate, _upperHint, _lowerHint);
         }
@@ -1306,25 +1306,34 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
     }
 
     function _requireTroveIsOpen(ITroveManager _troveManager, uint256 _troveId) internal view {
-        if (!_troveManager.checkTroveIsOpen(_troveId)) {
+        ITroveManager.Status status = _troveManager.getTroveStatus(_troveId);
+        if (status != ITroveManager.Status.active && status != ITroveManager.Status.unredeemable) {
             revert TroveNotOpen();
         }
     }
 
     function _requireTroveIsActive(ITroveManager _troveManager, uint256 _troveId) internal view {
-        if (!_troveManager.checkTroveIsActive(_troveId)) {
+        ITroveManager.Status status = _troveManager.getTroveStatus(_troveId);
+        if (status != ITroveManager.Status.active) {
             revert TroveNotActive();
         }
     }
 
     function _requireTroveIsUnredeemable(ITroveManager _troveManager, uint256 _troveId) internal view {
-        if (!_troveManager.checkTroveIsUnredeemable(_troveId)) {
+        ITroveManager.Status status = _troveManager.getTroveStatus(_troveId);
+        if (!_checkTroveIsUnredeemable(_troveManager, _troveId)) {
             revert TroveNotUnredeemable();
         }
     }
 
+    function _checkTroveIsUnredeemable(ITroveManager _troveManager, uint256 _troveId) internal view returns (bool) {
+        ITroveManager.Status status = _troveManager.getTroveStatus(_troveId);
+        return status == ITroveManager.Status.unredeemable;
+    }
+
     function _requireTroveIsNotOpen(ITroveManager _troveManager, uint256 _troveId) internal view {
-        if (_troveManager.checkTroveIsOpen(_troveId)) {
+        ITroveManager.Status status = _troveManager.getTroveStatus(_troveId);
+        if (status == ITroveManager.Status.active || status == ITroveManager.Status.unredeemable) {
             revert TroveOpen();
         }
     }

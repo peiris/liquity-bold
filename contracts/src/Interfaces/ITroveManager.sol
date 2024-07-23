@@ -68,9 +68,7 @@ interface ITroveManager is ILiquityBase {
     function getLatestTroveData(uint256 _troveId) external view returns (LatestTroveData memory);
     function getTroveAnnualInterestRate(uint256 _troveId) external view returns (uint256);
 
-    function checkTroveIsActive(uint256 _troveId) external view returns (bool);
-    function checkTroveIsOpen(uint256 _troveId) external view returns (bool);
-    function checkTroveIsUnredeemable(uint256 _troveId) external view returns (bool);
+    function getTroveStatus(uint256 _troveId) external view returns (Status);
 
     function calcTroveAccruedInterest(uint256 _troveId) external view returns (uint256);
     function calcTroveAccruedBatchManagementFee(uint256 _troveId) external view returns (uint256);
