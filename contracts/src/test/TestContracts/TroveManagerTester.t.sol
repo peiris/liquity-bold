@@ -145,6 +145,17 @@ contract TroveManagerTester is ITroveManagerTester, TroveManager {
 
     // Trove and batch getters
 
+    function hasRedistributionGains(uint256 _troveId) external view override returns (bool) {
+        /*
+         * A Trove has redistribution gains if its snapshot is less than the current rewards per-unit-staked sum:
+         * this indicates that rewards have occured since the snapshot was made, and the user therefore has
+         * redistribution gains
+         */
+        if (!checkTroveIsOpen(_troveId)) return false;
+
+        return (rewardSnapshots[_troveId].coll < L_coll);
+    }
+
     // Get the borrower's pending accumulated Coll reward, earned by their stake
     function getPendingCollReward(uint256 _troveId) external view override returns (uint256 redistCollGain) {
         LatestTroveData memory trove;
