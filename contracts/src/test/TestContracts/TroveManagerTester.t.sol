@@ -270,6 +270,58 @@ contract TroveManagerTester is ITroveManagerTester, TroveManager {
         return block.timestamp - trove.lastDebtUpdateTime > STALE_TROVE_DURATION;
     }
 
+    // TODO: analyze precision loss in interest functions and decide upon the minimum granularity
+    // (per-second, per-block, etc)
+    function calcTroveAccruedInterest(uint256 _troveId) external view returns (uint256) {
+        Trove memory trove = Troves[_troveId];
+
+        // If trove belongs to a batch, we fetch the batch and apply its share to obtained values
+        address batchAddress = _getBatchManager(_troveId);
+        if (batchAddress != address(0)) {
+            uint256 batchAccruedInterest = calcBatchAccruedInterest(batchAddress);
+            return batchAccruedInterest * trove.batchDebtShares / batches[batchAddress].totalDebtShares;
+        }
+
+        uint256 recordedDebt = trove.debt;
+        // convert annual interest to per-second and multiply by the principal
+        uint256 annualInterestRate = trove.annualInterestRate;
+
+        uint256 period = _getInterestPeriod(trove.lastDebtUpdateTime);
+
+        return _calcInterest(recordedDebt * annualInterestRate, period);
+    }
+
+    function calcBatchAccruedInterest(address _batchAddress) public view returns (uint256) {
+        Batch memory batch = batches[_batchAddress];
+        uint256 recordedDebt = batch.debt;
+        // convert annual interest to per-second and multiply by the principal
+        uint256 annualInterestRate = batch.annualInterestRate;
+
+        uint256 period = _getInterestPeriod(batch.lastDebtUpdateTime);
+
+        return _calcInterest(recordedDebt * annualInterestRate, period);
+    }
+
+    function calcTroveAccruedBatchManagementFee(uint256 _troveId) external view returns (uint256) {
+        Trove memory trove = Troves[_troveId];
+
+        // If trove doesn’t belong to a batch, there’s no fee
+        address batchAddress = _getBatchManager(_troveId);
+        if (batchAddress == address(0)) return 0;
+
+        // If trove belongs to a batch, we fetch the batch and apply its share to obtained values
+        Batch memory batch = batches[batchAddress];
+        if (batch.totalDebtShares == 0) return 0;
+        uint256 batchAccruedManagementFee = calcBatchAccruedManagementFee(batchAddress);
+        return batchAccruedManagementFee * trove.batchDebtShares / batch.totalDebtShares;
+    }
+
+    function calcBatchAccruedManagementFee(address _batchAddress) public view returns (uint256) {
+        Batch memory batch = batches[_batchAddress];
+        // convert annual interest to per-second and multiply by the principal
+        return _calcInterest(batch.debt * batch.annualManagementFee, block.timestamp - batch.lastDebtUpdateTime);
+    }
+
     function getBatchAnnualInterestRate(address _batchAddress) external view returns (uint256) {
         return batches[_batchAddress].annualInterestRate;
     }
