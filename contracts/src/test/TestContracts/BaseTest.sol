@@ -484,6 +484,32 @@ contract BaseTest is TestAccounts {
         vm.stopPrank();
     }
 
+    function switchBatchManager(address _troveOwner, uint256 _troveId, address _newBatchManager) internal {
+        switchBatchManager(_troveOwner, _troveId, 0, 0, _newBatchManager, 0, 0, type(uint256).max);
+    }
+    function switchBatchManager(
+        address _troveOwner,
+        uint256 _troveId,
+        uint256 _removeUpperHint,
+        uint256 _removeLowerHint,
+        address _newBatchManager,
+        uint256 _addUpperHint,
+        uint256 _addLowerHint,
+        uint256 _maxUpfrontFee
+    ) internal {
+        vm.startPrank(_troveOwner);
+        borrowerOperations.switchBatchManager(
+            _troveId,
+            _removeUpperHint,
+            _removeLowerHint,
+            _newBatchManager,
+            _addUpperHint,
+            _addLowerHint,
+            _maxUpfrontFee
+        );
+        vm.stopPrank();
+    }
+
     function logContractAddresses() public view {
         console.log("ActivePool addr: ", address(activePool));
         console.log("BorrowerOps addr: ", address(borrowerOperations));

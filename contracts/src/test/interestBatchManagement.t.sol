@@ -377,9 +377,7 @@ contract InterestBatchManagementTest is DevTestSetup {
         );
 
         // Move the last trove from B to C
-        vm.startPrank(E);
-        borrowerOperations.setInterestBatchManager(troveIDs.E, C, 0, 0, 100000e18);
-        vm.stopPrank();
+        switchBatchManager(E, troveIDs.E, C);
 
         // Check new batch manager
         assertEq(borrowerOperations.interestBatchManagerOf(troveIDs.E), C, "Wrong batch manager in BO");
@@ -585,7 +583,7 @@ contract InterestBatchManagementTest is DevTestSetup {
         assertGt(upfrontFee, 0, "Upfront fee should be > 0");
 
         // Switch from B to C
-        setInterestBatchManager(A, troveId, C);
+        switchBatchManager(A, troveId, C);
 
         assertApproxEqAbs(
             troveManager.getTroveEntireDebt(troveId),
@@ -612,7 +610,7 @@ contract InterestBatchManagementTest is DevTestSetup {
         uint256 upfrontFee = predictAdjustInterestRateUpfrontFee(troveId, 5e16);
         assertGt(upfrontFee, 0, "Upfront fee should be > 0");
         // Switch from B to C
-        setInterestBatchManager(A, troveId, C);
+        switchBatchManager(A, troveId, C);
         assertApproxEqAbs(
             troveManager.getTroveEntireDebt(troveId),
             ADebtBefore + upfrontFee,
@@ -634,7 +632,7 @@ contract InterestBatchManagementTest is DevTestSetup {
         uint256 troveId = openTroveAndJoinBatchManager(A, 100 ether, 2000e18, B, 5e16);
 
         // Switch from B to C
-        setInterestBatchManager(A, troveId, C, MIN_ANNUAL_INTEREST_RATE);
+        switchBatchManager(A, troveId, C);
 
         uint256 ADebtBefore = troveManager.getTroveEntireDebt(troveId);
         // B changes interest rate, but it doesn’t trigger upfront fee

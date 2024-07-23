@@ -124,6 +124,7 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
     error ZeroAdjustment();
     error NotOwnerNorInterestManager();
     error TroveInBatch();
+    error TroveNotInBatch();
     error InterestNotInRange();
     error BatchInterestRateChangePeriodNotPassed();
     error TroveNotOpen();
@@ -969,12 +970,12 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         uint256 _upperHint,
         uint256 _lowerHint,
         uint256 _maxUpfrontFee
-    ) external {
+    ) public override {
         _requireCallerIsBorrower(_troveId);
         _requireValidInterestBatchManager(_newBatchManager);
+        _requireIsNotInBatch(_troveId);
+
         LocalVariables_setInterestBatchManager memory vars;
-        vars.oldBatchManager = interestBatchManagerOf[_troveId];
-        _requireNewInterestBatchManager(vars.oldBatchManager, _newBatchManager);
 
         vars.troveManager = troveManager;
         vars.activePool = activePool;
@@ -985,38 +986,17 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         if (interestIndividualDelegateOf[_troveId].account != address(0)) delete interestIndividualDelegateOf[_troveId];
 
         vars.trove = vars.troveManager.getLatestTroveData(_troveId);
-        bool isTroveInBatch = vars.oldBatchManager != address(0);
-        // Take care of batch fee accountancy in Active Pool
-        if (isTroveInBatch) {
-            vars.oldBatch = vars.troveManager.getLatestBatchData(vars.oldBatchManager);
-            TroveChange memory oldBatchTroveChange;
-            oldBatchTroveChange.oldWeightedRecordedBatchManagementFee = vars.oldBatch.weightedRecordedBatchManagementFee
-                + (vars.trove.entireDebt - vars.trove.redistBoldDebtGain) * vars.oldBatch.annualManagementFee;
-            oldBatchTroveChange.newWeightedRecordedBatchManagementFee =
-                vars.oldBatch.entireDebtWithoutRedistribution * vars.oldBatch.annualManagementFee;
-            oldBatchTroveChange.batchAccruedManagementFee = vars.oldBatch.accruedManagementFee;
-            vars.activePool.mintBatchManagementFeeAndAccountForChange(oldBatchTroveChange, vars.oldBatchManager);
-        }
         vars.newBatch = vars.troveManager.getLatestBatchData(_newBatchManager);
 
         TroveChange memory newBatchTroveChange;
         newBatchTroveChange.appliedRedistBoldDebtGain = vars.trove.redistBoldDebtGain;
         newBatchTroveChange.appliedRedistCollGain = vars.trove.redistCollGain;
         newBatchTroveChange.batchAccruedManagementFee = vars.newBatch.accruedManagementFee;
-        if (isTroveInBatch) {
-            newBatchTroveChange.oldWeightedRecordedDebt = vars.oldBatch.weightedRecordedDebt
-                + vars.newBatch.weightedRecordedDebt
-                + (vars.trove.entireDebt - vars.trove.redistBoldDebtGain) * vars.oldBatch.annualInterestRate;
-            newBatchTroveChange.newWeightedRecordedDebt = vars.oldBatch.entireDebtWithoutRedistribution
-                * vars.oldBatch.annualInterestRate
-                + (vars.newBatch.entireDebtWithoutRedistribution + vars.trove.entireDebt) * vars.newBatch.annualInterestRate;
-        } else {
-            newBatchTroveChange.oldWeightedRecordedDebt =
-                vars.trove.weightedRecordedDebt + vars.newBatch.weightedRecordedDebt;
-            newBatchTroveChange.newWeightedRecordedDebt = (
-                vars.newBatch.entireDebtWithoutRedistribution + vars.trove.entireDebt
-            ) * vars.newBatch.annualInterestRate;
-        }
+        newBatchTroveChange.oldWeightedRecordedDebt =
+            vars.trove.weightedRecordedDebt + vars.newBatch.weightedRecordedDebt;
+        newBatchTroveChange.newWeightedRecordedDebt = (
+            vars.newBatch.entireDebtWithoutRedistribution + vars.trove.entireDebt
+        ) * vars.newBatch.annualInterestRate;
 
         // TODO: We may check the old rate to see if it’s different than the new one, but then we should check the
         // last interest adjustment times to avoid gaming. So we decided to keep it simple and account it always
@@ -1028,15 +1008,9 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         }
 
         // Recalculate newWeightedRecordedDebt, now taking into account the upfront fee
-        if (isTroveInBatch) {
-            newBatchTroveChange.newWeightedRecordedDebt = vars.oldBatch.entireDebtWithoutRedistribution
-                * vars.oldBatch.annualInterestRate
-                + (vars.newBatch.entireDebtWithoutRedistribution + vars.trove.entireDebt) * vars.newBatch.annualInterestRate;
-        } else {
-            newBatchTroveChange.newWeightedRecordedDebt = (
-                vars.newBatch.entireDebtWithoutRedistribution + vars.trove.entireDebt
-            ) * vars.newBatch.annualInterestRate;
-        }
+        newBatchTroveChange.newWeightedRecordedDebt = (
+            vars.newBatch.entireDebtWithoutRedistribution + vars.trove.entireDebt
+        ) * vars.newBatch.annualInterestRate;
 
         // Add batch fees
         newBatchTroveChange.oldWeightedRecordedBatchManagementFee = vars.newBatch.weightedRecordedBatchManagementFee;
@@ -1050,20 +1024,13 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
                 troveColl: vars.trove.entireColl,
                 troveDebt: vars.trove.entireDebt,
                 troveChange: newBatchTroveChange,
-                oldBatchAddress: vars.oldBatchManager,
                 newBatchAddress: _newBatchManager,
-                oldBatchColl: vars.oldBatch.entireCollWithoutRedistribution,
-                oldBatchDebt: vars.oldBatch.entireDebtWithoutRedistribution,
                 newBatchColl: vars.newBatch.entireCollWithoutRedistribution,
                 newBatchDebt: vars.newBatch.entireDebtWithoutRedistribution
             })
         );
 
-        if (isTroveInBatch) {
-            vars.sortedTroves.removeFromBatch(_troveId);
-        } else {
-            vars.sortedTroves.remove(_troveId);
-        }
+        vars.sortedTroves.remove(_troveId);
         vars.sortedTroves.insertIntoBatch(
             _troveId, BatchId.wrap(_newBatchManager), vars.newBatch.annualInterestRate, _upperHint, _lowerHint
         );
@@ -1132,6 +1099,24 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
             vars.batch.entireDebtWithoutRedistribution,
             _newAnnualInterestRate
         );
+    }
+
+    function switchBatchManager(
+        uint256 _troveId,
+        uint256 _removeUpperHint,
+        uint256 _removeLowerHint,
+        address _newBatchManager,
+        uint256 _addUpperHint,
+        uint256 _addLowerHint,
+        uint256 _maxUpfrontFee
+    ) external override {
+        address oldBatchManager = _requireIsInBatch(_troveId);
+        _requireNewInterestBatchManager(oldBatchManager, _newBatchManager);
+
+        LatestBatchData memory oldBatch = troveManager.getLatestBatchData(oldBatchManager);
+
+        removeFromBatch(_troveId, oldBatch.annualInterestRate, _removeUpperHint, _removeLowerHint, 0);
+        setInterestBatchManager(_troveId, _newBatchManager, _addUpperHint, _addLowerHint, _maxUpfrontFee);
     }
 
     function _applyUpfrontFee(
@@ -1270,6 +1255,15 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         if (interestBatchManagerOf[_troveId] != address(0)) {
             revert TroveInBatch();
         }
+    }
+
+    function _requireIsInBatch(uint256 _troveId) internal view returns (address) {
+        address batchManager = interestBatchManagerOf[_troveId];
+        if (batchManager == address(0)) {
+            revert TroveNotInBatch();
+        }
+
+        return batchManager;
     }
 
     function _requireInterestRateInDelegateRange(uint256 _troveId, uint256 _annualInterestRate) internal view {
