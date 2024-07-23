@@ -77,8 +77,23 @@ contract BaseTest is TestAccounts {
         return hintHelpers.predictAdjustInterestRateUpfrontFee(0, troveId, newInterestRate);
     }
 
+    function forcePredictAdjustInterestRateUpfrontFee(uint256 troveId, uint256 newInterestRate)
+        internal
+        view
+        returns (uint256)
+    {
+        return hintHelpers.forcePredictAdjustInterestRateUpfrontFee(0, troveId, newInterestRate);
+    }
+
     function predictAdjustTroveUpfrontFee(uint256 troveId, uint256 debtIncrease) internal view returns (uint256) {
         return hintHelpers.predictAdjustTroveUpfrontFee(0, troveId, debtIncrease);
+    }
+
+    function predictJoinBatchInterestRateUpfrontFee(
+        uint256 _troveId,
+        address _batchAddress
+    ) internal view returns (uint256) {
+        return hintHelpers.predictJoinBatchInterestRateUpfrontFee(0, _troveId, _batchAddress);
     }
 
     // Quick and dirty binary search instead of Newton's, because it's easier
@@ -481,6 +496,32 @@ contract BaseTest is TestAccounts {
     function removeFromBatch(address _troveOwner, uint256 _troveId, uint256 _newAnnualInterestRate) internal {
         vm.startPrank(_troveOwner);
         borrowerOperations.removeFromBatch(_troveId, _newAnnualInterestRate, 0, 0, type(uint256).max);
+        vm.stopPrank();
+    }
+
+    function switchBatchManager(address _troveOwner, uint256 _troveId, address _newBatchManager) internal {
+        switchBatchManager(_troveOwner, _troveId, 0, 0, _newBatchManager, 0, 0, type(uint256).max);
+    }
+    function switchBatchManager(
+        address _troveOwner,
+        uint256 _troveId,
+        uint256 _removeUpperHint,
+        uint256 _removeLowerHint,
+        address _newBatchManager,
+        uint256 _addUpperHint,
+        uint256 _addLowerHint,
+        uint256 _maxUpfrontFee
+    ) internal {
+        vm.startPrank(_troveOwner);
+        borrowerOperations.switchBatchManager(
+            _troveId,
+            _removeUpperHint,
+            _removeLowerHint,
+            _newBatchManager,
+            _addUpperHint,
+            _addLowerHint,
+            _maxUpfrontFee
+        );
         vm.stopPrank();
     }
 

@@ -1765,31 +1765,18 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     }
 
     function onSetInterestBatchManager(OnSetInterestBatchManagerParams calldata _params) external {
+        _requireCallerIsBorrowerOperations();
         TroveChange memory _troveChange = _params.troveChange;
 
-        _requireCallerIsBorrowerOperations();
         assert(batchIds[batches[_params.newBatchAddress].arrayIndex] == _params.newBatchAddress);
 
         _updateTroveRewardSnapshots(_params.troveId);
 
-        // Subtract from old manager
-        if (_params.oldBatchAddress != address(0)) {
-            _removeTroveSharesFromBatch(
-                _params.troveId,
-                _params.troveColl,
-                _params.troveDebt,
-                _troveChange,
-                _params.oldBatchAddress,
-                _params.oldBatchColl,
-                _params.oldBatchDebt
-            );
-        } else {
-            // If trove didn’t belong to a batch before, let’s clean its state
-            Troves[_params.troveId].debt = 0;
-            Troves[_params.troveId].coll = 0;
-            Troves[_params.troveId].annualInterestRate = 0;
-            Troves[_params.troveId].lastDebtUpdateTime = 0;
-        }
+        // Clean Trove state
+        Troves[_params.troveId].debt = 0;
+        Troves[_params.troveId].coll = 0;
+        Troves[_params.troveId].annualInterestRate = 0;
+        Troves[_params.troveId].lastDebtUpdateTime = 0;
 
         Troves[_params.troveId].interestBatchManager = _params.newBatchAddress;
         Troves[_params.troveId].lastInterestRateAdjTime = uint64(block.timestamp);
@@ -1824,18 +1811,6 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
             _troveChange.appliedRedistCollGain,
             0 // _collChangeFromOperation
         );
-
-        if (_params.oldBatchAddress != address(0)) {
-            emit BatchUpdated(
-                _params.oldBatchAddress,
-                BatchOperation.exitBatch,
-                batches[_params.oldBatchAddress].debt,
-                batches[_params.oldBatchAddress].coll,
-                batches[_params.oldBatchAddress].annualInterestRate,
-                batches[_params.oldBatchAddress].annualManagementFee,
-                batches[_params.oldBatchAddress].totalDebtShares
-            );
-        }
 
         emit BatchUpdated(
             _params.newBatchAddress,
@@ -1943,9 +1918,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         Troves[_troveId].stake = _computeNewStake(_newTroveColl);
         Troves[_troveId].lastDebtUpdateTime = uint64(block.timestamp);
         Troves[_troveId].annualInterestRate = _newAnnualInterestRate;
-        if (batches[_batchAddress].annualInterestRate != _newAnnualInterestRate) {
-            Troves[_troveId].lastInterestRateAdjTime = uint64(block.timestamp);
-        }
+        Troves[_troveId].lastInterestRateAdjTime = uint64(block.timestamp);
 
         _updateTroveRewardSnapshots(_troveId);
         _movePendingTroveRewardsToActivePool(

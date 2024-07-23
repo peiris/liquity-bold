@@ -161,10 +161,7 @@ interface ITroveManager is ILiquityBase {
         uint256 troveColl; // entire, with redistribution
         uint256 troveDebt; // entire, with interest, batch fee and redistribution
         TroveChange troveChange;
-        address oldBatchAddress;
         address newBatchAddress;
-        uint256 oldBatchColl; // updated collateral for previous batch manager
-        uint256 oldBatchDebt; // updated debt for previous batch manager
         uint256 newBatchColl; // updated collateral for new batch manager
         uint256 newBatchDebt; // updated debt for new batch manager
     }

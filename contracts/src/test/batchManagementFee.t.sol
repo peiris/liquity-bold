@@ -236,8 +236,8 @@ contract BatchManagementFeeTest is DevTestSetup {
         uint256 batchDInitialBalance = boldToken.balanceOf(D);
         uint256 batchDAccruedManagementFee = troveManager.calcBatchAccruedManagementFee(D);
 
-        // Add trove to batch
-        setInterestBatchManager(C, troveId, B);
+        // Switch trove batch
+        switchBatchManager(C, troveId, B);
 
         assertEq(boldToken.balanceOf(B), batchBInitialBalance + batchBAccruedManagementFee);
         assertEq(boldToken.balanceOf(D), batchDInitialBalance + batchDAccruedManagementFee);
@@ -254,11 +254,14 @@ contract BatchManagementFeeTest is DevTestSetup {
         uint256 troveAccruedInterest = troveManager.calcTroveAccruedInterest(troveId);
         uint256 troveAccruedManagementFee = troveManager.calcTroveAccruedBatchManagementFee(troveId);
 
-        // Add trove to batch
+        // Switch trove batch
+        //switchBatchManager(C, troveId, B);
+        removeFromBatch(C, troveId, 5e16);
+        uint256 upfrontFee = predictJoinBatchInterestRateUpfrontFee(troveId, B);
         setInterestBatchManager(C, troveId, B);
 
-        assertEq(
-            troveManager.getTroveDebt(troveId), troveInitialDebt + troveAccruedInterest + troveAccruedManagementFee
+        assertApproxEqAbs(
+            troveManager.getTroveDebt(troveId), troveInitialDebt + troveAccruedInterest + troveAccruedManagementFee + upfrontFee, 1
         );
     }
 
@@ -275,13 +278,16 @@ contract BatchManagementFeeTest is DevTestSetup {
         uint256 batchDAccruedInterest = troveManager.calcBatchAccruedInterest(B);
         uint256 batchDAccruedManagementFee = troveManager.calcBatchAccruedManagementFee(B);
 
-        // Add trove to batch
+        // Switch trove batch
+        //switchBatchManager(C, troveId, B);
+        removeFromBatch(C, troveId, 5e16);
+        uint256 upfrontFee = predictJoinBatchInterestRateUpfrontFee(troveId, B);
         setInterestBatchManager(C, troveId, B);
 
         assertApproxEqAbs(
             activePool.aggRecordedDebt(),
             activePoolInitialDebt + batchBAccruedInterest + batchBAccruedManagementFee + batchDAccruedInterest
-                + batchDAccruedManagementFee,
+            + batchDAccruedManagementFee + upfrontFee,
             10
         );
     }
@@ -370,7 +376,8 @@ contract BatchManagementFeeTest is DevTestSetup {
 
         // Second trove changes batch (with a different fee)
         registerBatchManager(D, uint128(MIN_ANNUAL_INTEREST_RATE), 1e18, 4e16, 50e14, 0);
-        setInterestBatchManager(C, CTroveId, D, 0);
+        // Switch trove batch
+        switchBatchManager(C, CTroveId, D);
 
         vm.warp(block.timestamp + 5 days);
 

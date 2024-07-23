@@ -159,4 +159,13 @@ interface IBorrowerOperations is ILiquityBase, IAddRemoveManagers {
         uint256 _lowerHint,
         uint256 _maxUpfrontFee
     ) external;
+    function switchBatchManager(
+        uint256 _troveId,
+        uint256 _removeUpperHint,
+        uint256 _removeLowerHint,
+        address _newBatchManager,
+        uint256 _addUpperHint,
+        uint256 _addLowerHint,
+        uint256 _maxUpfrontFee
+    ) external;
 }
