@@ -1111,21 +1111,8 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         TroveIds.pop();
     }
 
-    // --- TCR functions ---
-
-    function checkTroveIsOpen(uint256 _troveId) public view returns (bool) {
-        Status status = Troves[_troveId].status;
-        return status == Status.active || status == Status.unredeemable;
-    }
-
-    function checkTroveIsActive(uint256 _troveId) external view returns (bool) {
-        Status status = Troves[_troveId].status;
-        return status == Status.active;
-    }
-
-    function checkTroveIsUnredeemable(uint256 _troveId) external view returns (bool) {
-        Status status = Troves[_troveId].status;
-        return status == Status.unredeemable;
+    function getTroveStatus(uint256 _troveId) external override view returns (Status) {
+        return Troves[_troveId].status;
     }
 
     // --- Interest rate calculations ---

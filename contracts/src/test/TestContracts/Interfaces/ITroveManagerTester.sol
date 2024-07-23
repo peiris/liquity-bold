@@ -39,6 +39,9 @@ interface ITroveManagerTester is ITroveManager {
     function balanceOf(address _account) external view returns (uint256);
 
     // Trove and batch getters
+    function checkTroveIsActive(uint256 _troveId) external view returns (bool);
+    function checkTroveIsOpen(uint256 _troveId) external view returns (bool);
+    function checkTroveIsUnredeemable(uint256 _troveId) external view returns (bool);
 
     function hasRedistributionGains(uint256 _troveId) external view returns (bool);
 
@@ -61,7 +64,7 @@ interface ITroveManagerTester is ITroveManager {
 
     function getTroveEntireColl(uint256 _troveId) external view returns (uint256);
 
-    function getTroveStatus(uint256 _troveId) external view returns (Status);
+    //function getTroveStatus(uint256 _troveId) external view returns (Status);
 
     function getTroveStake(uint256 _troveId) external view returns (uint256);
 
