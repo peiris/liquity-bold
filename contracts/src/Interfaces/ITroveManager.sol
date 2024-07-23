@@ -54,8 +54,6 @@ interface ITroveManager is ILiquityBase {
 
     function getCurrentICR(uint256 _troveId, uint256 _price) external view returns (uint256);
 
-    function liquidate(uint256 _troveId) external;
-
     function batchLiquidateTroves(uint256[] calldata _troveArray) external;
 
     function redeemCollateral(

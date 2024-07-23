@@ -12,6 +12,13 @@ for testing the parent's internal functions. */
 contract TroveManagerTester is ITroveManagerTester, TroveManager {
     constructor(ConstructorVars memory _vars) TroveManager(_vars) {}
 
+    // Single liquidation function. Closes the trove if its ICR is lower than the minimum collateral ratio.
+    function liquidate(uint256 _troveId) external override {
+        uint256[] memory troves = new uint256[](1);
+        troves[0] = _troveId;
+        batchLiquidateTroves(troves);
+    }
+
     function get_CCR() external view returns (uint256) {
         return CCR;
     }
