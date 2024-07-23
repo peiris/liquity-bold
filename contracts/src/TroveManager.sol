@@ -132,7 +132,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         uint256 collToRedistribute;
         uint256 collSurplus;
         uint256 ETHGasCompensation;
-        uint256 oldWeightedRecordedDebt; // TODO: remove
+        uint256 oldWeightedRecordedDebt;
         uint256 newWeightedRecordedDebt;
     }
 
@@ -513,7 +513,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
                 remainingBoldInStabPool -= singleLiquidation.debtToOffset;
 
                 // Add liquidation values to their respective running totals
-                _addLiquidationValuesToTotals(trove, singleLiquidation, singleLiquidation.oldWeightedRecordedDebt, singleLiquidation.newWeightedRecordedDebt, totals, troveChange);
+                _addLiquidationValuesToTotals(trove, singleLiquidation, totals, troveChange);
             }
         }
     }
@@ -524,8 +524,6 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     function _addLiquidationValuesToTotals(
         LatestTroveData memory _trove,
         LiquidationValues memory _singleLiquidation,
-        uint256 _oldWeightedRecordedDebt,
-        uint256 _newWeightedRecordedDebt,
         LiquidationValues memory totals,
         TroveChange memory troveChange)
         internal
@@ -537,8 +535,8 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         troveChange.debtDecrease += _trove.entireDebt;
         troveChange.collDecrease += _trove.entireColl;
         troveChange.appliedRedistBoldDebtGain += _trove.redistBoldDebtGain;
-        troveChange.oldWeightedRecordedDebt += _oldWeightedRecordedDebt;
-        troveChange.newWeightedRecordedDebt += _newWeightedRecordedDebt;
+        troveChange.oldWeightedRecordedDebt += _singleLiquidation.oldWeightedRecordedDebt;
+        troveChange.newWeightedRecordedDebt += _singleLiquidation.newWeightedRecordedDebt;
         totals.debtToOffset += _singleLiquidation.debtToOffset;
         totals.collToSendToSP += _singleLiquidation.collToSendToSP;
         totals.debtToRedistribute += _singleLiquidation.debtToRedistribute;
