@@ -30,8 +30,6 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     // Wrapped ETH for liquidation reserve (gas compensation)
     IWETH internal immutable WETH;
 
-    // --- Data structures ---
-
     // Critical system collateral ratio. If the system's total collateral ratio (TCR) falls below the CCR, some borrowing operation restrictions are applied
     uint256 public immutable CCR;
 
@@ -45,6 +43,8 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     uint256 internal immutable LIQUIDATION_PENALTY_SP;
     // Liquidation penalty for troves redistributed
     uint256 internal immutable LIQUIDATION_PENALTY_REDISTRIBUTION;
+
+    // --- Data structures ---
 
     // Store the necessary data for a trove
     struct Trove {
@@ -154,11 +154,6 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     }
 
     // --- Variable container structs for redemptions ---
-
-    struct RedemptionTotals {
-        TroveChange troveChange;
-        uint256 collFee;
-    }
 
     struct SingleRedemptionValues {
         uint256 troveId;
@@ -765,7 +760,8 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
 
         ContractsCache memory contractsCache =
             ContractsCache(activePool, defaultPool, boldToken, sortedTroves, collSurplusPool);
-        RedemptionTotals memory totals;
+        TroveChange memory totalsTroveChange;
+        uint256 totalCollFee;
 
         uint256 remainingBold = _boldamount;
 
@@ -821,15 +817,15 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
 
             _redeemCollateralFromTrove(contractsCache, singleRedemption, remainingBold, _price, _redemptionRate);
 
-            totals.troveChange.collDecrease += singleRedemption.collLot;
-            totals.troveChange.debtDecrease += singleRedemption.boldLot;
-            totals.troveChange.appliedRedistBoldDebtGain += singleRedemption.appliedRedistBoldDebtGain;
+            totalsTroveChange.collDecrease += singleRedemption.collLot;
+            totalsTroveChange.debtDecrease += singleRedemption.boldLot;
+            totalsTroveChange.appliedRedistBoldDebtGain += singleRedemption.appliedRedistBoldDebtGain;
             // For recorded and weighted recorded debt totals, we need to capture the increases and decreases,
             // since the net debt change for a given Trove could be positive or negative: redemptions decrease a Trove's recorded
             // (and weighted recorded) debt, but the accrued interest increases it.
-            totals.troveChange.newWeightedRecordedDebt += singleRedemption.newWeightedRecordedDebt;
-            totals.troveChange.oldWeightedRecordedDebt += singleRedemption.oldWeightedRecordedDebt;
-            totals.collFee += singleRedemption.collFee;
+            totalsTroveChange.newWeightedRecordedDebt += singleRedemption.newWeightedRecordedDebt;
+            totalsTroveChange.oldWeightedRecordedDebt += singleRedemption.oldWeightedRecordedDebt;
+            totalCollFee += singleRedemption.collFee;
 
             remainingBold -= singleRedemption.boldLot;
             singleRedemption.troveId = nextUserToCheck;
@@ -839,16 +835,16 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         //require(totals.totalCollDrawn > 0, "TroveManager: Unable to redeem any amount");
 
         emit Redemption(
-            _boldamount, totals.troveChange.debtDecrease, totals.troveChange.collDecrease, totals.collFee, _price
+            _boldamount, totalsTroveChange.debtDecrease, totalsTroveChange.collDecrease, totalCollFee, _price
         );
 
-        activePool.mintAggInterestAndAccountForTroveChange(totals.troveChange, address(0));
+        activePool.mintAggInterestAndAccountForTroveChange(totalsTroveChange, address(0));
 
         // Send the redeemed Coll to sender
-        contractsCache.activePool.sendColl(_redeemer, totals.troveChange.collDecrease);
+        contractsCache.activePool.sendColl(_redeemer, totalsTroveChange.collDecrease);
         // We’ll burn all the Bold together out in the CollateralRegistry, to save gas
 
-        return totals.troveChange.debtDecrease;
+        return totalsTroveChange.debtDecrease;
     }
 
     // Redeem as much collateral as possible from _borrower's Trove in exchange for Bold up to _maxBoldamount
@@ -885,7 +881,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
 
         ContractsCache memory contractsCache =
             ContractsCache(activePool, defaultPool, boldToken, sortedTroves, collSurplusPool);
-        RedemptionTotals memory totals;
+        TroveChange memory totalsTroveChange;
 
         uint256 price = priceFeed.fetchPrice();
 
@@ -894,32 +890,32 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
             SingleRedemptionValues memory singleRedemption;
             singleRedemption.troveId = _troveIds[i];
             _urgentRedeemCollateralFromTrove(contractsCache.defaultPool, remainingBold, price, singleRedemption);
-            totals.troveChange.collDecrease += singleRedemption.collLot;
-            totals.troveChange.debtDecrease += singleRedemption.boldLot;
-            totals.troveChange.appliedRedistBoldDebtGain += singleRedemption.appliedRedistBoldDebtGain;
+            totalsTroveChange.collDecrease += singleRedemption.collLot;
+            totalsTroveChange.debtDecrease += singleRedemption.boldLot;
+            totalsTroveChange.appliedRedistBoldDebtGain += singleRedemption.appliedRedistBoldDebtGain;
             // For recorded and weighted recorded debt totals, we need to capture the increases and decreases,
             // since the net debt change for a given Trove could be positive or negative: redemptions decrease a Trove's recorded
             // (and weighted recorded) debt, but the accrued interest increases it.
-            totals.troveChange.newWeightedRecordedDebt += singleRedemption.newWeightedRecordedDebt;
-            totals.troveChange.oldWeightedRecordedDebt += singleRedemption.oldWeightedRecordedDebt;
+            totalsTroveChange.newWeightedRecordedDebt += singleRedemption.newWeightedRecordedDebt;
+            totalsTroveChange.oldWeightedRecordedDebt += singleRedemption.oldWeightedRecordedDebt;
 
             remainingBold -= singleRedemption.boldLot;
         }
 
-        if (totals.troveChange.collDecrease < _minCollateral) {
-            revert MinCollNotReached(totals.troveChange.collDecrease);
+        if (totalsTroveChange.collDecrease < _minCollateral) {
+            revert MinCollNotReached(totalsTroveChange.collDecrease);
         }
 
-        emit Redemption(_boldAmount, totals.troveChange.debtDecrease, totals.troveChange.collDecrease, 0, price);
+        emit Redemption(_boldAmount, totalsTroveChange.debtDecrease, totalsTroveChange.collDecrease, 0, price);
 
         // Since this branch is shut down, this will mint 0 interest.
         // We call this only to update the aggregate debt and weighted debt trackers.
-        activePool.mintAggInterestAndAccountForTroveChange(totals.troveChange, address(0));
+        activePool.mintAggInterestAndAccountForTroveChange(totalsTroveChange, address(0));
 
         // Send the redeemed coll to caller
-        contractsCache.activePool.sendColl(msg.sender, totals.troveChange.collDecrease);
+        contractsCache.activePool.sendColl(msg.sender, totalsTroveChange.collDecrease);
         // Burn bold
-        contractsCache.boldToken.burn(msg.sender, totals.troveChange.debtDecrease);
+        contractsCache.boldToken.burn(msg.sender, totalsTroveChange.debtDecrease);
     }
 
     function shutdown() external {
