@@ -1137,14 +1137,6 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
 
     // --- TCR functions ---
 
-    function getTCR(uint256 _price) external view override returns (uint256) {
-        return _getTCR(_price);
-    }
-
-    function checkBelowCriticalThreshold(uint256 _price) external view override returns (bool) {
-        return _checkBelowCriticalThreshold(_price, CCR);
-    }
-
     function checkTroveIsOpen(uint256 _troveId) public view returns (bool) {
         Status status = Troves[_troveId].status;
         return status == Status.active || status == Status.unredeemable;

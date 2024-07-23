@@ -71,6 +71,14 @@ contract TroveManagerTester is ITroveManagerTester, TroveManager {
         return TroveIds[_index];
     }
 
+    function getTCR(uint256 _price) external view override returns (uint256) {
+        return _getTCR(_price);
+    }
+
+    function checkBelowCriticalThreshold(uint256 _price) external view override returns (bool) {
+        return _checkBelowCriticalThreshold(_price, CCR);
+    }
+
     function computeICR(uint256 _coll, uint256 _debt, uint256 _price) external pure returns (uint256) {
         return LiquityMath._computeCR(_coll, _debt, _price);
     }
