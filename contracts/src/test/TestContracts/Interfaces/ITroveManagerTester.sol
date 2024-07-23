@@ -78,6 +78,11 @@ interface ITroveManagerTester is ITroveManager {
 
     function troveIsStale(uint256 _troveId) external view returns (bool);
 
+    function calcTroveAccruedInterest(uint256 _troveId) external view returns (uint256);
+    function calcTroveAccruedBatchManagementFee(uint256 _troveId) external view returns (uint256);
+    function calcBatchAccruedInterest(address _batchAddress) external view returns (uint256);
+    function calcBatchAccruedManagementFee(address _batchAddress) external view returns (uint256);
+
     function getBatchAnnualInterestRate(address _batchAddress) external view returns (uint256);
     function getBatchLastDebtUpdateTime(address _batchAddress) external view returns (uint256);
 }

@@ -70,12 +70,7 @@ interface ITroveManager is ILiquityBase {
 
     function getTroveStatus(uint256 _troveId) external view returns (Status);
 
-    function calcTroveAccruedInterest(uint256 _troveId) external view returns (uint256);
-    function calcTroveAccruedBatchManagementFee(uint256 _troveId) external view returns (uint256);
-
     function getLatestBatchData(address _batchAddress) external view returns (LatestBatchData memory);
-    function calcBatchAccruedInterest(address _batchAddress) external view returns (uint256);
-    function calcBatchAccruedManagementFee(address _batchAddress) external view returns (uint256);
 
     // -- permissioned functions called by BorrowerOperations
 
