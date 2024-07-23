@@ -908,17 +908,6 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         rewardSnapshots[_troveId].boldDebt = L_boldDebt;
     }
 
-    function hasRedistributionGains(uint256 _troveId) external view override returns (bool) {
-        /*
-        * A Trove has redistribution gains if its snapshot is less than the current rewards per-unit-staked sum:
-        * this indicates that rewards have occured since the snapshot was made, and the user therefore has
-        * redistribution gains
-        */
-        if (!checkTroveIsOpen(_troveId)) return false;
-
-        return (rewardSnapshots[_troveId].coll < L_coll);
-    }
-
     // Return the Troves entire debt and coll, including redistribution gains from redistributions.
     function _getLatestTroveData(uint256 _troveId, LatestTroveData memory trove) internal view {
         // If trove belongs to a batch, we fetch the batch and apply its share to obtained values

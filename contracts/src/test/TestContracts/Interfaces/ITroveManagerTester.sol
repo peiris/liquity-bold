@@ -40,6 +40,8 @@ interface ITroveManagerTester is ITroveManager {
 
     // Trove and batch getters
 
+    function hasRedistributionGains(uint256 _troveId) external view returns (bool);
+
     function getPendingCollReward(uint256 _troveId) external view returns (uint256);
 
     function getPendingBoldDebtReward(uint256 _troveId) external view returns (uint256);

@@ -65,8 +65,6 @@ interface ITroveManager is ILiquityBase {
 
     function getUnbackedPortionPriceAndRedeemability() external returns (uint256, uint256, bool);
 
-    function hasRedistributionGains(uint256 _troveId) external view returns (bool);
-
     function getLatestTroveData(uint256 _troveId) external view returns (LatestTroveData memory);
     function getTroveAnnualInterestRate(uint256 _troveId) external view returns (uint256);
 
