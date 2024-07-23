@@ -5,6 +5,9 @@ pragma solidity 0.8.18;
 import "../../../Interfaces/ITroveManager.sol";
 
 interface ITroveManagerTester is ITroveManager {
+
+    function liquidate(uint256 _troveId) external;
+
     function get_CCR() external view returns (uint256);
     function get_MCR() external view returns (uint256);
     function get_SCR() external view returns (uint256);

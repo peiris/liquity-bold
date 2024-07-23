@@ -252,15 +252,6 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
 
     // --- Trove Liquidation functions ---
 
-    // Single liquidation function. Closes the trove if its ICR is lower than the minimum collateral ratio.
-    function liquidate(uint256 _troveId) external override {
-        _requireTroveIsOpen(_troveId);
-
-        uint256[] memory troves = new uint256[](1);
-        troves[0] = _troveId;
-        batchLiquidateTroves(troves);
-    }
-
     // --- Inner single liquidation functions ---
 
     // Liquidate one trove
@@ -1248,12 +1239,6 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     function _requireCallerIsCollateralRegistry() internal view {
         if (msg.sender != address(collateralRegistry)) {
             revert CallerNotCollateralRegistry();
-        }
-    }
-
-    function _requireTroveIsOpen(uint256 _troveId) internal view {
-        if (!checkTroveIsOpen(_troveId)) {
-            revert TroveNotOpen(_troveId);
         }
     }
 

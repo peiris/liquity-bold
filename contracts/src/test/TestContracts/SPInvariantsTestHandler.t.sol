@@ -194,7 +194,7 @@ contract SPInvariantsTestHandler is BaseHandler {
         uint256 claimableColl = coll - seizedColl - collCompensation;
 
         // try
-        troveManager.liquidate(troveId);
+        TroveManagerTester(address(troveManager)).liquidate(troveId);
         // {} catch Panic(uint256 errorCode) {
         //     // XXX ignore assertion failure inside liquidation (due to P = 0)
         //     assertEq(errorCode, 1, "Unexpected revert in liquidate()");
