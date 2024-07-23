@@ -145,14 +145,6 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         uint256 newWeightedRecordedDebt;
     }
 
-    struct ContractsCache {
-        IActivePool activePool;
-        IDefaultPool defaultPool;
-        IBoldToken boldToken;
-        ISortedTroves sortedTroves;
-        ICollSurplusPool collSurplusPool;
-    }
-
     // --- Variable container structs for redemptions ---
 
     struct SingleRedemptionValues {
@@ -696,7 +688,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
 
     // Redeem as much collateral as possible from _borrower's Trove in exchange for Bold up to _maxBoldamount
     function _redeemCollateralFromTrove(
-        ContractsCache memory _contractsCache,
+        IDefaultPool _defaultPool,
         SingleRedemptionValues memory _singleRedemption,
         uint256 _maxBoldamount,
         uint256 _price,
@@ -715,7 +707,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         _singleRedemption.collLot = correspondingColl - _singleRedemption.collFee;
 
         bool isTroveInBatch = _singleRedemption.batchAddress != address(0);
-        uint256 newDebt = _applySingleRedemption(_contractsCache.defaultPool, _singleRedemption, isTroveInBatch);
+        uint256 newDebt = _applySingleRedemption(_defaultPool, _singleRedemption, isTroveInBatch);
 
         // Make Trove unredeemable if it's tiny, in order to prevent griefing future (normal, sequential) redemptions
         if (newDebt < MIN_DEBT) {
@@ -758,15 +750,16 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     ) external override returns (uint256 _redemeedAmount) {
         _requireCallerIsCollateralRegistry();
 
-        ContractsCache memory contractsCache =
-            ContractsCache(activePool, defaultPool, boldToken, sortedTroves, collSurplusPool);
+        IActivePool activePoolCached = activePool;
+        ISortedTroves sortedTrovesCached = sortedTroves;
+
         TroveChange memory totalsTroveChange;
         uint256 totalCollFee;
 
         uint256 remainingBold = _boldamount;
 
         SingleRedemptionValues memory singleRedemption;
-        singleRedemption.troveId = contractsCache.sortedTroves.getLast();
+        singleRedemption.troveId = sortedTrovesCached.getLast();
         address lastBatchUpdatedInterest = address(0);
 
         // Loop through the Troves starting from the one with lowest collateral ratio until _amount of Bold is exchanged for collateral
@@ -774,7 +767,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         while (singleRedemption.troveId != 0 && remainingBold > 0 && _maxIterations > 0) {
             _maxIterations--;
             // Save the uint256 of the Trove preceding the current one
-            uint256 nextUserToCheck = contractsCache.sortedTroves.getPrev(singleRedemption.troveId);
+            uint256 nextUserToCheck = sortedTrovesCached.getPrev(singleRedemption.troveId);
             // Skip if ICR < 100%, to make sure that redemptions always improve the CR of hit Troves
             if (getCurrentICR(singleRedemption.troveId, _price) < _100pct) {
                 singleRedemption.troveId = nextUserToCheck;
@@ -802,7 +795,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
                 batchTroveChange.newWeightedRecordedBatchManagementFee =
                     batch.entireDebtWithoutRedistribution * batch.annualManagementFee;
 
-                activePool.mintAggInterestAndAccountForTroveChange(batchTroveChange, singleRedemption.batchAddress);
+                activePoolCached.mintAggInterestAndAccountForTroveChange(batchTroveChange, singleRedemption.batchAddress);
 
                 emit BatchUpdated(
                     singleRedemption.batchAddress,
@@ -815,7 +808,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
                 );
             }
 
-            _redeemCollateralFromTrove(contractsCache, singleRedemption, remainingBold, _price, _redemptionRate);
+            _redeemCollateralFromTrove(defaultPool, singleRedemption, remainingBold, _price, _redemptionRate);
 
             totalsTroveChange.collDecrease += singleRedemption.collLot;
             totalsTroveChange.debtDecrease += singleRedemption.boldLot;
@@ -838,10 +831,10 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
             _boldamount, totalsTroveChange.debtDecrease, totalsTroveChange.collDecrease, totalCollFee, _price
         );
 
-        activePool.mintAggInterestAndAccountForTroveChange(totalsTroveChange, address(0));
+        activePoolCached.mintAggInterestAndAccountForTroveChange(totalsTroveChange, address(0));
 
         // Send the redeemed Coll to sender
-        contractsCache.activePool.sendColl(_redeemer, totalsTroveChange.collDecrease);
+        activePoolCached.sendColl(_redeemer, totalsTroveChange.collDecrease);
         // We’ll burn all the Bold together out in the CollateralRegistry, to save gas
 
         return totalsTroveChange.debtDecrease;
@@ -879,8 +872,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
     function urgentRedemption(uint256 _boldAmount, uint256[] calldata _troveIds, uint256 _minCollateral) external {
         _requireIsShutDown();
 
-        ContractsCache memory contractsCache =
-            ContractsCache(activePool, defaultPool, boldToken, sortedTroves, collSurplusPool);
+        IActivePool activePoolCached = activePool;
         TroveChange memory totalsTroveChange;
 
         uint256 price = priceFeed.fetchPrice();
@@ -889,7 +881,7 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
         for (uint256 i = 0; i < _troveIds.length; i++) {
             SingleRedemptionValues memory singleRedemption;
             singleRedemption.troveId = _troveIds[i];
-            _urgentRedeemCollateralFromTrove(contractsCache.defaultPool, remainingBold, price, singleRedemption);
+            _urgentRedeemCollateralFromTrove(defaultPool, remainingBold, price, singleRedemption);
             totalsTroveChange.collDecrease += singleRedemption.collLot;
             totalsTroveChange.debtDecrease += singleRedemption.boldLot;
             totalsTroveChange.appliedRedistBoldDebtGain += singleRedemption.appliedRedistBoldDebtGain;
@@ -910,12 +902,12 @@ contract TroveManager is LiquityBase, ITroveManager, ITroveEvents {
 
         // Since this branch is shut down, this will mint 0 interest.
         // We call this only to update the aggregate debt and weighted debt trackers.
-        activePool.mintAggInterestAndAccountForTroveChange(totalsTroveChange, address(0));
+        activePoolCached.mintAggInterestAndAccountForTroveChange(totalsTroveChange, address(0));
 
         // Send the redeemed coll to caller
-        contractsCache.activePool.sendColl(msg.sender, totalsTroveChange.collDecrease);
+        activePoolCached.sendColl(msg.sender, totalsTroveChange.collDecrease);
         // Burn bold
-        contractsCache.boldToken.burn(msg.sender, totalsTroveChange.debtDecrease);
+        boldToken.burn(msg.sender, totalsTroveChange.debtDecrease);
     }
 
     function shutdown() external {
