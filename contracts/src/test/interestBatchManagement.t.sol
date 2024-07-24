@@ -298,6 +298,8 @@ contract InterestBatchManagementTest is DevTestSetup {
         ABCDEF memory troveIDs;
         ABCDEF memory troveRecordedDebtBefore;
         ABCDEF memory troveEntireDebtBefore;
+        ABCDEF memory batchRecordedDebtBefore;
+        ABCDEF memory batchEntireDebtBefore;
 
         troveIDs.A = openTroveAndJoinBatchManager();
 
@@ -363,21 +365,25 @@ contract InterestBatchManagementTest is DevTestSetup {
         );
 
         LatestBatchData memory batchB = troveManager.getLatestBatchData(B);
-        uint256 batchBRecordedDebtBefore = batchB.recordedDebt;
-        uint256 batchBEntireDebtBefore = batchB.entireDebtWithoutRedistribution;
+        batchRecordedDebtBefore.B = batchB.recordedDebt;
+        batchEntireDebtBefore.B = batchB.entireDebtWithoutRedistribution;
         assertGt(
-            batchBEntireDebtBefore, batchBRecordedDebtBefore, "Batch B entire debt should be greater than recorded"
+            batchEntireDebtBefore.B, batchRecordedDebtBefore.B, "Batch B entire debt should be greater than recorded"
         );
 
         LatestBatchData memory batchC = troveManager.getLatestBatchData(C);
-        uint256 batchCRecordedDebtBefore = batchC.recordedDebt;
-        uint256 batchCEntireDebtBefore = batchC.entireDebtWithoutRedistribution;
+        batchRecordedDebtBefore.C = batchC.recordedDebt;
+        batchEntireDebtBefore.C = batchC.entireDebtWithoutRedistribution;
         assertGt(
-            batchCEntireDebtBefore, batchCRecordedDebtBefore, "Batch C entire debt should be greater than recorded"
+            batchEntireDebtBefore.C, batchRecordedDebtBefore.C, "Batch C entire debt should be greater than recorded"
         );
 
         // Move the last trove from B to C
-        switchBatchManager(E, troveIDs.E, C);
+        console2.log(" -- switch --");
+        //switchBatchManager(E, troveIDs.E, C);
+        removeFromBatch(E, troveIDs.E, 5e16);
+        uint256 upfrontFee = forcePredictAdjustInterestRateUpfrontFee(troveIDs.E, 5e16);
+        setInterestBatchManager(E, troveIDs.E, C);
 
         // Check new batch manager
         assertEq(borrowerOperations.interestBatchManagerOf(troveIDs.E), C, "Wrong batch manager in BO");
@@ -403,8 +409,11 @@ contract InterestBatchManagementTest is DevTestSetup {
             "Trove D recorded debt should be equal to entire"
         );
 
+        console2.log(troveManager.getTroveDebt(troveIDs.E), "troveManager.getTroveDebt(troveIDs.E)");
+        console2.log(troveEntireDebtBefore.E, "troveEntireDebtBefore");
+        console2.log(upfrontFee, "upfrontFee");
         assertApproxEqAbs(
-            troveManager.getTroveDebt(troveIDs.E), troveEntireDebtBefore.E, 1, "Interest was not applied to trove E"
+            troveManager.getTroveDebt(troveIDs.E), troveEntireDebtBefore.E + upfrontFee, 1, "Interest was not applied to trove E"
         );
         assertEq(
             troveManager.getTroveDebt(troveIDs.E),
@@ -414,7 +423,7 @@ contract InterestBatchManagementTest is DevTestSetup {
 
         batchB = troveManager.getLatestBatchData(B);
         assertEq(
-            batchB.recordedDebt, batchBEntireDebtBefore - troveEntireDebtBefore.E, "Interest was not applied to batch B"
+            batchB.recordedDebt, batchEntireDebtBefore.B - troveEntireDebtBefore.E, "Interest was not applied to batch B"
         );
         assertEq(
             batchB.recordedDebt,
@@ -424,7 +433,7 @@ contract InterestBatchManagementTest is DevTestSetup {
 
         batchC = troveManager.getLatestBatchData(C);
         assertEq(
-            batchC.recordedDebt, batchCEntireDebtBefore + troveEntireDebtBefore.E, "Interest was not applied to batch C"
+            batchC.recordedDebt, batchEntireDebtBefore.C + troveEntireDebtBefore.E, "Interest was not applied to batch C"
         );
         assertEq(
             batchC.recordedDebt,
@@ -585,6 +594,9 @@ contract InterestBatchManagementTest is DevTestSetup {
         // Switch from B to C
         switchBatchManager(A, troveId, C);
 
+        console2.log(troveManager.getTroveEntireDebt(troveId), "troveManager.getTroveEntireDebt(troveId)");
+        console2.log(ADebtBefore, "ADebtBefore");
+        console2.log(upfrontFee, "upfrontFee");
         assertApproxEqAbs(
             troveManager.getTroveEntireDebt(troveId),
             ADebtBefore + upfrontFee,

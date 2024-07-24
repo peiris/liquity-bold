@@ -15,7 +15,7 @@ import "./Dependencies/Ownable.sol";
 import "./Types/LatestTroveData.sol";
 import "./Types/LatestBatchData.sol";
 
-// import "forge-std/console2.sol";
+import "forge-std/console2.sol";
 
 contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowerOperations {
     using SafeERC20 for IERC20;
@@ -992,8 +992,12 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         newBatchTroveChange.appliedRedistBoldDebtGain = vars.trove.redistBoldDebtGain;
         newBatchTroveChange.appliedRedistCollGain = vars.trove.redistCollGain;
         newBatchTroveChange.batchAccruedManagementFee = vars.newBatch.accruedManagementFee;
+        console2.log(vars.trove.weightedRecordedDebt / vars.newBatch.annualInterestRate, "vars.trove.weightedRecordedDebt / ");
+        console2.log(vars.newBatch.weightedRecordedDebt / vars.newBatch.annualInterestRate, "vars.newBatch.weightedRecordedDebt");
         newBatchTroveChange.oldWeightedRecordedDebt =
-            vars.trove.weightedRecordedDebt + vars.newBatch.weightedRecordedDebt;
+            vars.newBatch.weightedRecordedDebt + vars.trove.weightedRecordedDebt;
+        console2.log(vars.trove.entireDebt, "vars.trove.entireDebt");
+        console2.log(vars.newBatch.entireDebtWithoutRedistribution, "vars.newBatch.entireDebtWithoutRedistribution");
         newBatchTroveChange.newWeightedRecordedDebt = (
             vars.newBatch.entireDebtWithoutRedistribution + vars.trove.entireDebt
         ) * vars.newBatch.annualInterestRate;
@@ -1002,9 +1006,14 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
         // last interest adjustment times to avoid gaming. So we decided to keep it simple and account it always
         // as a change. It’s probably not so common to join a batch with the exact same interest rate.
         // Apply upfront fee on premature adjustments
+        console2.log(block.timestamp, "block.timestamp");
+        console2.log(vars.trove.lastInterestRateAdjTime + INTEREST_RATE_ADJ_COOLDOWN, "vars.trove.lastInterestRateAdjTime + INTEREST_RATE_ADJ_COOLDOWN");
+        console2.log(vars.trove.lastInterestRateAdjTime, "vars.trove.lastInterestRateAdjTime");
+        console2.log(INTEREST_RATE_ADJ_COOLDOWN, "INTEREST_RATE_ADJ_COOLDOWN");
         if (block.timestamp < vars.trove.lastInterestRateAdjTime + INTEREST_RATE_ADJ_COOLDOWN) {
             vars.trove.entireDebt =
                 _applyUpfrontFee(vars.trove.entireColl, vars.trove.entireDebt, newBatchTroveChange, _maxUpfrontFee);
+            console2.log(vars.trove.entireDebt, "vars.trove.entireDebt");
         }
 
         // Recalculate newWeightedRecordedDebt, now taking into account the upfront fee
@@ -1127,8 +1136,12 @@ contract BorrowerOperations is LiquityBase, AddRemoveManagers, Ownable, IBorrowe
     ) internal returns (uint256) {
         uint256 price = priceFeed.fetchPrice();
 
+        console2.log(" -- BO --");
         uint256 avgInterestRate = activePool.getNewApproxAvgInterestRateFromTroveChange(_troveChange);
+        console2.log(_troveEntireDebt, "_troveEntireDebt");
+        console2.log(avgInterestRate, "avgInterestRate");
         _troveChange.upfrontFee = _calcUpfrontFee(_troveEntireDebt, avgInterestRate);
+        console2.log(_troveChange.upfrontFee, "_troveChange.upfrontFee");
         _requireUserAcceptsUpfrontFee(_troveChange.upfrontFee, _maxUpfrontFee);
 
         _troveEntireDebt += _troveChange.upfrontFee;

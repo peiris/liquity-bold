@@ -77,6 +77,14 @@ contract BaseTest is TestAccounts {
         return hintHelpers.predictAdjustInterestRateUpfrontFee(0, troveId, newInterestRate);
     }
 
+    function forcePredictAdjustInterestRateUpfrontFee(uint256 troveId, uint256 newInterestRate)
+        internal
+        view
+        returns (uint256)
+    {
+        return hintHelpers.forcePredictAdjustInterestRateUpfrontFee(0, troveId, newInterestRate);
+    }
+
     function predictAdjustTroveUpfrontFee(uint256 troveId, uint256 debtIncrease) internal view returns (uint256) {
         return hintHelpers.predictAdjustTroveUpfrontFee(0, troveId, debtIncrease);
     }

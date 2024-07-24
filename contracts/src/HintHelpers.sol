@@ -6,7 +6,7 @@ import "./Interfaces/ICollateralRegistry.sol";
 import "./Dependencies/LiquityMath.sol";
 import "./Dependencies/Constants.sol";
 
-// import "forge-std/console2.sol";
+import "forge-std/console2.sol";
 
 contract HintHelpers {
     string public constant NAME = "HintHelpers";
@@ -98,13 +98,36 @@ contract HintHelpers {
             return 0;
         }
 
-        TroveChange memory troveChange;
-        troveChange.appliedRedistBoldDebtGain = trove.redistBoldDebtGain;
-        troveChange.newWeightedRecordedDebt = trove.entireDebt * _newInterestRate;
-        troveChange.oldWeightedRecordedDebt = trove.weightedRecordedDebt;
+        return _predictAdjustInterestRateUpfrontFee(activePool, trove, _newInterestRate);
+    }
 
-        uint256 avgInterestRate = activePool.getNewApproxAvgInterestRateFromTroveChange(troveChange);
-        return _calcUpfrontFee(trove.entireDebt, avgInterestRate);
+    function forcePredictAdjustInterestRateUpfrontFee(uint256 _collIndex, uint256 _troveId, uint256 _newInterestRate)
+        external
+        view
+        returns (uint256)
+    {
+        ITroveManager troveManager = collateralRegistry.troveManagers(_collIndex);
+        IActivePool activePool = troveManager.activePool();
+        LatestTroveData memory trove = troveManager.getLatestTroveData(_troveId);
+
+        return _predictAdjustInterestRateUpfrontFee(activePool, trove, _newInterestRate);
+    }
+
+    function _predictAdjustInterestRateUpfrontFee(IActivePool _activePool, LatestTroveData memory _trove, uint256 _newInterestRate)
+        internal
+        view
+        returns (uint256)
+    {
+        TroveChange memory troveChange;
+        troveChange.appliedRedistBoldDebtGain = _trove.redistBoldDebtGain;
+        troveChange.newWeightedRecordedDebt = _trove.entireDebt * _newInterestRate;
+        troveChange.oldWeightedRecordedDebt = _trove.weightedRecordedDebt;
+
+        console2.log(" -- HH --");
+        uint256 avgInterestRate = _activePool.getNewApproxAvgInterestRateFromTroveChange(troveChange);
+        console2.log(_trove.entireDebt, "_trove.entireDebt");
+        console2.log(avgInterestRate, "avgInterestRate");
+        return _calcUpfrontFee(_trove.entireDebt, avgInterestRate);
     }
 
     function predictAdjustTroveUpfrontFee(uint256 _collIndex, uint256 _troveId, uint256 _debtIncrease)

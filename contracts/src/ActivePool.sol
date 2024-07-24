@@ -12,7 +12,7 @@ import "./Interfaces/IInterestRouter.sol";
 import "./Dependencies/Ownable.sol";
 import "./Interfaces/IDefaultPool.sol";
 
-// import "forge-std/console2.sol";
+import "forge-std/console2.sol";
 
 /*
  * The Active Pool holds the collateral and Bold debt (but not Bold tokens) for all active troves.
@@ -148,14 +148,27 @@ contract ActivePool is Ownable, IActivePool {
         if (hasBeenShutDown) return 0;
 
         uint256 newAggRecordedDebt = aggRecordedDebt;
+        console2.log(newAggRecordedDebt, "newAggRecordedDebt");
+        console2.log(calcPendingAggInterest(), "calcPendingAggInterest()");
+        console2.log(newAggRecordedDebt + calcPendingAggInterest(), "+");
+        console2.log(_troveChange.appliedRedistBoldDebtGain, "_troveChange.appliedRedistBoldDebtGain");
+        console2.log(_troveChange.debtIncrease, "_troveChange.debtIncrease");
+        console2.log(_troveChange.debtDecrease, "_troveChange.debtDecrease");
         newAggRecordedDebt += calcPendingAggInterest();
         newAggRecordedDebt += _troveChange.appliedRedistBoldDebtGain;
         newAggRecordedDebt += _troveChange.debtIncrease;
         newAggRecordedDebt -= _troveChange.debtDecrease;
 
         uint256 newAggWeightedDebtSum = aggWeightedDebtSum;
+        console2.log(newAggWeightedDebtSum, "newAggWeightedDebtSum");
+        console2.log(_troveChange.newWeightedRecordedDebt, "_troveChange.newWeightedRecordedDebt");
+        console2.log(_troveChange.oldWeightedRecordedDebt, "_troveChange.oldWeightedRecordedDebt");
+        if (_troveChange.newWeightedRecordedDebt >= _troveChange.oldWeightedRecordedDebt)
+            console2.log(_troveChange.newWeightedRecordedDebt - _troveChange.oldWeightedRecordedDebt, "-");
         newAggWeightedDebtSum += _troveChange.newWeightedRecordedDebt;
         newAggWeightedDebtSum -= _troveChange.oldWeightedRecordedDebt;
+        console2.log(newAggRecordedDebt, "newAggRecordedDebt");
+        console2.log(newAggWeightedDebtSum, "newAggWeightedDebtSum");
 
         // Avoid division by 0 if the first ever borrower tries to borrow 0 BOLD
         // Borrowing 0 BOLD is not allowed, but our check of debt >= MIN_DEBT happens _after_ calculating the upfront

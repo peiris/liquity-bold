@@ -276,12 +276,13 @@ contract BatchManagementFeeTest is DevTestSetup {
         uint256 batchDAccruedManagementFee = troveManager.calcBatchAccruedManagementFee(B);
 
         // Switch trove batch
+        uint256 upfrontFee = predictAdjustInterestRateUpfrontFee(troveId, 5e16);
         switchBatchManager(C, troveId, B);
 
         assertApproxEqAbs(
             activePool.aggRecordedDebt(),
             activePoolInitialDebt + batchBAccruedInterest + batchBAccruedManagementFee + batchDAccruedInterest
-                + batchDAccruedManagementFee,
+            + batchDAccruedManagementFee + upfrontFee,
             10
         );
     }
