@@ -4,7 +4,7 @@ pragma solidity 0.8.18;
 import {Script} from "forge-std/Script.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {TestDeployer} from "../test/TestContracts/Deployment.t.sol";
+import {TestnetDeployer} from "../test/TestContracts/TestnetDeployment.t.sol";
 import {Accounts} from "../test/TestContracts/Accounts.sol";
 import {ERC20Faucet} from "../test/TestContracts/ERC20Faucet.sol";
 import {ETH_GAS_COMPENSATION} from "../Dependencies/Constants.sol";
@@ -27,8 +27,8 @@ contract DeployLiquity2Script is Script, StdCheats {
             vm.startBroadcast(vm.envUint("DEPLOYER"));
         }
 
-        TestDeployer deployer = new TestDeployer();
-        (TestDeployer.LiquityContractsDev memory contracts,,,,,) = deployer.deployAndConnectContracts();
+        TestnetDeployer deployer = new TestnetDeployer();
+        TestnetDeployer.LiquityContractsDev memory contracts = deployer.getContracts();
         vm.stopBroadcast();
 
         if (vm.envOr("OPEN_DEMO_TROVES", false)) {
@@ -55,7 +55,7 @@ contract DeployLiquity2Script is Script, StdCheats {
         }
     }
 
-    function tapFaucet(uint256[] memory accounts, TestDeployer.LiquityContractsDev memory contracts) internal {
+    function tapFaucet(uint256[] memory accounts, TestnetDeployer.LiquityContractsDev memory contracts) internal {
         for (uint256 i = 0; i < accounts.length; i++) {
             vm.startBroadcast(accounts[i]);
             ERC20Faucet(address(contracts.collToken)).tap();
@@ -63,7 +63,7 @@ contract DeployLiquity2Script is Script, StdCheats {
         }
     }
 
-    function openDemoTroves(DemoTroveParams[] memory troves, TestDeployer.LiquityContractsDev memory contracts)
+    function openDemoTroves(DemoTroveParams[] memory troves, TestnetDeployer.LiquityContractsDev memory contracts)
         internal
     {
         for (uint256 i = 0; i < troves.length; i++) {
