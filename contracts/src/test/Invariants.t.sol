@@ -379,4 +379,68 @@ contract InvariantsTest is Logging, BaseInvariantTest, BaseMultiCollateralTest {
             seenBatches.clear();
         }
     }
+
+    function test_Issue_WrongInterestAndBatchManagementFeeAccrualAfterRedemption() external {
+        vm.prank(adam);
+        handler.registerBatchManager(0, 0.01 ether, 1 ether, 0.05 ether, 0.001 ether, 1);
+
+        // coll: 150.028767123287671232 ether
+        // debt: 10_001.917808219178082191 ether
+        // upper hint: 0
+        // lower hint: 0
+        // upfront fee: 1.917808219178082191 ether
+        vm.prank(barb);
+        handler.openTrove(0, 10_000 ether, 3 ether, 0.01 ether, 0, 0);
+
+        // batch manager: adam
+        // upper hint: 0
+        // lower hint: 0
+        // upfront fee: 9.590880090073184462 ether
+        vm.prank(barb);
+        handler.setInterestBatchManager(0, 0, 0, 0);
+
+        // coll: 11.109226017303333631 ether
+        // debt: 2_001.66234546006011372 ether
+        // upper hint: 0
+        // lower hint: 0
+        // upfront fee: 1.66234546006011372 ether
+        vm.prank(carl);
+        handler.openTrove(0, 2_000 ether, 1.11 ether, 0.01 ether, 0, 0);
+
+        vm.prank(carl);
+        handler.addMeToLiquidationBatch();
+
+        // price: 193.835383443982067299 ether
+        vm.prank(dana);
+        handler.setPrice(0, 2.6 ether);
+
+        // 1.075786378114100473 ether
+        // batch: [carl]
+        // liquidated: [carl]
+        // SP offset: 0 ether
+        // debt redist: 2_001.66234546006011372 ether
+        vm.prank(dana);
+        handler.batchLiquidateTroves(0);
+
+        // SP BOLD: 0 ether
+        // P: 1 ether
+
+        this.invariant_SystemStateMatchesGhostState();
+
+        // redemption rate: 0.091620984051129217 ether
+        // redeemed BOLD: 1_000 ether
+        // redeemed Troves: [
+        //   [barb],
+        //   [],
+        //   [],
+        //   [],
+        // ]
+        vm.prank(dana);
+        handler.redeemCollateral(1_000 ether, 1);
+
+        this.invariant_SystemStateMatchesGhostState();
+        //   [FAIL. Reason: Wrong interest accrual: 450.575434415462563332650000000000000000 !~= 550.658551688465569018650000000000000000 (max delta: 0.000000000000000000000000000100000000, real delta: 100.083117273003005686000000000000000000)]
+        // Commenting out the interest accrual check:
+        //   [FAIL. Reason: Wrong batch management fee accrual: 9.011508688309251266653000000000000000 !~= 11.013171033769311380373000000000000000 (max delta: 0.000000000000000000000000000100000000, real delta: 2.001662345460060113720000000000000000)]
+    }
 }
