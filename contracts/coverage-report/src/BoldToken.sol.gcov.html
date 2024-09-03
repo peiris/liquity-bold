@@ -1,0 +1,217 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - lcov.info - src/BoldToken.sol</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">src</a> - BoldToken.sol<span style="font-size: 80%;"> (source / <a href="BoldToken.sol.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">lcov.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">25</td>
+            <td class="headerCovTableEntry">27</td>
+            <td class="headerCovTableEntryHi">92.6 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2024-09-03 14:08:39</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">12</td>
+            <td class="headerCovTableEntry">13</td>
+            <td class="headerCovTableEntryHi">92.3 %</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="headerItem">Branches:</td>
+            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntryLo">50.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">           Branch data     Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>                :            : // SPDX-License-Identifier: BUSL-1.1</a>
+<a name="2"><span class="lineNum">       2 </span>                :            : </a>
+<a name="3"><span class="lineNum">       3 </span>                :            : pragma solidity 0.8.18;</a>
+<a name="4"><span class="lineNum">       4 </span>                :            : </a>
+<a name="5"><span class="lineNum">       5 </span>                :            : import &quot;openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Permit.sol&quot;;</a>
+<a name="6"><span class="lineNum">       6 </span>                :            : import &quot;./Dependencies/Ownable.sol&quot;;</a>
+<a name="7"><span class="lineNum">       7 </span>                :            : import &quot;./Interfaces/IBoldToken.sol&quot;;</a>
+<a name="8"><span class="lineNum">       8 </span>                :            : </a>
+<a name="9"><span class="lineNum">       9 </span>                :            : /*</a>
+<a name="10"><span class="lineNum">      10 </span>                :            :  * --- Functionality added specific to the BoldToken ---</a>
+<a name="11"><span class="lineNum">      11 </span>                :            :  *</a>
+<a name="12"><span class="lineNum">      12 </span>                :            :  * 1) Transfer protection: blacklist of addresses that are invalid recipients (i.e. core Liquity contracts) in external</a>
+<a name="13"><span class="lineNum">      13 </span>                :            :  * transfer() and transferFrom() calls. The purpose is to protect users from losing tokens by mistakenly sending Bold directly to a Liquity</a>
+<a name="14"><span class="lineNum">      14 </span>                :            :  * core contract, when they should rather call the right function.</a>
+<a name="15"><span class="lineNum">      15 </span>                :            :  *</a>
+<a name="16"><span class="lineNum">      16 </span>                :            :  * 2) sendToPool() and returnFromPool(): functions callable only Liquity core contracts, which move Bold tokens between Liquity &lt;-&gt; user.</a>
+<a name="17"><span class="lineNum">      17 </span>                :            :  */</a>
+<a name="18"><span class="lineNum">      18 </span>                :            : </a>
+<a name="19"><span class="lineNum">      19 </span>                :            : contract BoldToken is Ownable, IBoldToken, ERC20Permit {</a>
+<a name="20"><span class="lineNum">      20 </span>                :            :     string internal constant _NAME = &quot;Bold Stablecoin&quot;;</a>
+<a name="21"><span class="lineNum">      21 </span>                :            :     string internal constant _SYMBOL = &quot;Bold&quot;;</a>
+<a name="22"><span class="lineNum">      22 </span>                :            : </a>
+<a name="23"><span class="lineNum">      23 </span>                :            :     // --- Addresses ---</a>
+<a name="24"><span class="lineNum">      24 </span>                :            : </a>
+<a name="25"><span class="lineNum">      25 </span>                :            :     // TODO: optimize to make them immutable</a>
+<a name="26"><span class="lineNum">      26 </span>                :            :     address public collateralRegistryAddress;</a>
+<a name="27"><span class="lineNum">      27 </span>                :            :     mapping(address =&gt; bool) troveManagerAddresses;</a>
+<a name="28"><span class="lineNum">      28 </span>                :            :     mapping(address =&gt; bool) stabilityPoolAddresses;</a>
+<a name="29"><span class="lineNum">      29 </span>                :            :     mapping(address =&gt; bool) borrowerOperationsAddresses;</a>
+<a name="30"><span class="lineNum">      30 </span>                :            :     mapping(address =&gt; bool) activePoolAddresses;</a>
+<a name="31"><span class="lineNum">      31 </span>                :            : </a>
+<a name="32"><span class="lineNum">      32 </span>                :            :     // --- Events ---</a>
+<a name="33"><span class="lineNum">      33 </span>                :            :     event CollateralRegistryAddressChanged(address _newCollateralRegistryAddress);</a>
+<a name="34"><span class="lineNum">      34 </span>                :            :     event TroveManagerAddressAdded(address _newTroveManagerAddress);</a>
+<a name="35"><span class="lineNum">      35 </span>                :            :     event StabilityPoolAddressAdded(address _newStabilityPoolAddress);</a>
+<a name="36"><span class="lineNum">      36 </span>                :            :     event BorrowerOperationsAddressAdded(address _newBorrowerOperationsAddress);</a>
+<a name="37"><span class="lineNum">      37 </span>                :            :     event ActivePoolAddressAdded(address _newActivePoolAddress);</a>
+<a name="38"><span class="lineNum">      38 </span>                :            : </a>
+<a name="39"><span class="lineNum">      39 </span>                :            :     constructor(address _owner) Ownable(_owner) ERC20(_NAME, _SYMBOL) ERC20Permit(_NAME) {}</a>
+<a name="40"><span class="lineNum">      40 </span>                :            : </a>
+<a name="41"><span class="lineNum">      41 </span>                :            :     function setBranchAddresses(</a>
+<a name="42"><span class="lineNum">      42 </span>                :            :         address _troveManagerAddress,</a>
+<a name="43"><span class="lineNum">      43 </span>                :            :         address _stabilityPoolAddress,</a>
+<a name="44"><span class="lineNum">      44 </span>                :            :         address _borrowerOperationsAddress,</a>
+<a name="45"><span class="lineNum">      45 </span>                :            :         address _activePoolAddress</a>
+<a name="46"><span class="lineNum">      46 </span>                :            :     ) external override onlyOwner {</a>
+<a name="47"><span class="lineNum">      47 </span>                :<span class="lineCov">         47 :         troveManagerAddresses[_troveManagerAddress] = true;</span></a>
+<a name="48"><span class="lineNum">      48 </span>                :<span class="lineCov">         47 :         emit TroveManagerAddressAdded(_troveManagerAddress);</span></a>
+<a name="49"><span class="lineNum">      49 </span>                :            : </a>
+<a name="50"><span class="lineNum">      50 </span>                :<span class="lineCov">         47 :         stabilityPoolAddresses[_stabilityPoolAddress] = true;</span></a>
+<a name="51"><span class="lineNum">      51 </span>                :<span class="lineCov">         47 :         emit StabilityPoolAddressAdded(_stabilityPoolAddress);</span></a>
+<a name="52"><span class="lineNum">      52 </span>                :            : </a>
+<a name="53"><span class="lineNum">      53 </span>                :<span class="lineCov">         47 :         borrowerOperationsAddresses[_borrowerOperationsAddress] = true;</span></a>
+<a name="54"><span class="lineNum">      54 </span>                :<span class="lineCov">         47 :         emit BorrowerOperationsAddressAdded(_borrowerOperationsAddress);</span></a>
+<a name="55"><span class="lineNum">      55 </span>                :            : </a>
+<a name="56"><span class="lineNum">      56 </span>                :<span class="lineCov">         47 :         activePoolAddresses[_activePoolAddress] = true;</span></a>
+<a name="57"><span class="lineNum">      57 </span>                :<span class="lineCov">         47 :         emit ActivePoolAddressAdded(_activePoolAddress);</span></a>
+<a name="58"><span class="lineNum">      58 </span>                :            :     }</a>
+<a name="59"><span class="lineNum">      59 </span>                :            : </a>
+<a name="60"><span class="lineNum">      60 </span>                :            :     function setCollateralRegistry(address _collateralRegistryAddress) external override onlyOwner {</a>
+<a name="61"><span class="lineNum">      61 </span>                :<span class="lineCov">         20 :         collateralRegistryAddress = _collateralRegistryAddress;</span></a>
+<a name="62"><span class="lineNum">      62 </span>                :<span class="lineCov">         20 :         emit CollateralRegistryAddressChanged(_collateralRegistryAddress);</span></a>
+<a name="63"><span class="lineNum">      63 </span>                :            : </a>
+<a name="64"><span class="lineNum">      64 </span>                :<span class="lineCov">         20 :         _renounceOwnership();</span></a>
+<a name="65"><span class="lineNum">      65 </span>                :            :     }</a>
+<a name="66"><span class="lineNum">      66 </span>                :            : </a>
+<a name="67"><span class="lineNum">      67 </span>                :            :     // --- Functions for intra-Liquity calls ---</a>
+<a name="68"><span class="lineNum">      68 </span>                :            : </a>
+<a name="69"><span class="lineNum">      69 </span>                :            :     function mint(address _account, uint256 _amount) external override {</a>
+<a name="70"><span class="lineNum">      70 </span>                :<span class="lineCov">     208718 :         _requireCallerIsBOorAP();</span></a>
+<a name="71"><span class="lineNum">      71 </span>                :<span class="lineCov">     208718 :         _mint(_account, _amount);</span></a>
+<a name="72"><span class="lineNum">      72 </span>                :            :     }</a>
+<a name="73"><span class="lineNum">      73 </span>                :            : </a>
+<a name="74"><span class="lineNum">      74 </span>                :            :     function burn(address _account, uint256 _amount) external override {</a>
+<a name="75"><span class="lineNum">      75 </span>                :<span class="lineCov">      52077 :         _requireCallerIsCRorBOorTMorSP();</span></a>
+<a name="76"><span class="lineNum">      76 </span>                :<span class="lineCov">      52077 :         _burn(_account, _amount);</span></a>
+<a name="77"><span class="lineNum">      77 </span>                :            :     }</a>
+<a name="78"><span class="lineNum">      78 </span>                :            : </a>
+<a name="79"><span class="lineNum">      79 </span>                :            :     function sendToPool(address _sender, address _poolAddress, uint256 _amount) external override {</a>
+<a name="80"><span class="lineNum">      80 </span>                :<span class="lineCov">      58584 :         _requireCallerIsStabilityPool();</span></a>
+<a name="81"><span class="lineNum">      81 </span>                :<span class="lineCov">      58584 :         _transfer(_sender, _poolAddress, _amount);</span></a>
+<a name="82"><span class="lineNum">      82 </span>                :            :     }</a>
+<a name="83"><span class="lineNum">      83 </span>                :            : </a>
+<a name="84"><span class="lineNum">      84 </span>                :            :     function returnFromPool(address _poolAddress, address _receiver, uint256 _amount) external override {</a>
+<a name="85"><span class="lineNum">      85 </span>                :<span class="lineCov">      15240 :         _requireCallerIsStabilityPool();</span></a>
+<a name="86"><span class="lineNum">      86 </span>                :<span class="lineCov">      15240 :         _transfer(_poolAddress, _receiver, _amount);</span></a>
+<a name="87"><span class="lineNum">      87 </span>                :            :     }</a>
+<a name="88"><span class="lineNum">      88 </span>                :            : </a>
+<a name="89"><span class="lineNum">      89 </span>                :            :     // --- External functions ---</a>
+<a name="90"><span class="lineNum">      90 </span>                :            : </a>
+<a name="91"><span class="lineNum">      91 </span>                :            :     function transfer(address recipient, uint256 amount) public override(ERC20, IERC20) returns (bool) {</a>
+<a name="92"><span class="lineNum">      92 </span>                :<span class="lineCov">     507634 :         _requireValidRecipient(recipient);</span></a>
+<a name="93"><span class="lineNum">      93 </span>                :<span class="lineCov">     507634 :         return super.transfer(recipient, amount);</span></a>
+<a name="94"><span class="lineNum">      94 </span>                :            :     }</a>
+<a name="95"><span class="lineNum">      95 </span>                :            : </a>
+<a name="96"><span class="lineNum">      96 </span>                :            :     function transferFrom(address sender, address recipient, uint256 amount)</a>
+<a name="97"><span class="lineNum">      97 </span>                :            :         public</a>
+<a name="98"><span class="lineNum">      98 </span>                :            :         override(ERC20, IERC20)</a>
+<a name="99"><span class="lineNum">      99 </span>                :            :         returns (bool)</a>
+<a name="100"><span class="lineNum">     100 </span>                :            :     {</a>
+<a name="101"><span class="lineNum">     101 </span>                :<span class="lineNoCov">          0 :         _requireValidRecipient(recipient);</span></a>
+<a name="102"><span class="lineNum">     102 </span>                :<span class="lineNoCov">          0 :         return super.transferFrom(sender, recipient, amount);</span></a>
+<a name="103"><span class="lineNum">     103 </span>                :            :     }</a>
+<a name="104"><span class="lineNum">     104 </span>                :            : </a>
+<a name="105"><span class="lineNum">     105 </span>                :            :     // --- 'require' functions ---</a>
+<a name="106"><span class="lineNum">     106 </span>                :            : </a>
+<a name="107"><span class="lineNum">     107 </span>                :            :     function _requireValidRecipient(address _recipient) internal view {</a>
+<a name="108"><span class="lineNum">     108 </span>        [<span class="branchNoExec" title="Branch 0 was not executed"> # </span><span class="branchCov" title="Branch 1 was taken 507634 times"> + </span>]:<span class="lineCov">     507634 :         require(</span></a>
+<a name="109"><span class="lineNum">     109 </span>                :            :             _recipient != address(0) &amp;&amp; _recipient != address(this),</a>
+<a name="110"><span class="lineNum">     110 </span>                :            :             &quot;Bold: Cannot transfer tokens directly to the Bold token contract or the zero address&quot;</a>
+<a name="111"><span class="lineNum">     111 </span>                :            :         );</a>
+<a name="112"><span class="lineNum">     112 </span>                :            :     }</a>
+<a name="113"><span class="lineNum">     113 </span>                :            : </a>
+<a name="114"><span class="lineNum">     114 </span>                :            :     function _requireCallerIsBOorAP() internal view {</a>
+<a name="115"><span class="lineNum">     115 </span>        [<span class="branchNoExec" title="Branch 0 was not executed"> # </span><span class="branchCov" title="Branch 1 was taken 208718 times"> + </span>]:<span class="lineCov">     208718 :         require(</span></a>
+<a name="116"><span class="lineNum">     116 </span>                :            :             borrowerOperationsAddresses[msg.sender] || activePoolAddresses[msg.sender],</a>
+<a name="117"><span class="lineNum">     117 </span>                :            :             &quot;BoldToken: Caller is not BO or AP&quot;</a>
+<a name="118"><span class="lineNum">     118 </span>                :            :         );</a>
+<a name="119"><span class="lineNum">     119 </span>                :            :     }</a>
+<a name="120"><span class="lineNum">     120 </span>                :            : </a>
+<a name="121"><span class="lineNum">     121 </span>                :            :     function _requireCallerIsCRorBOorTMorSP() internal view {</a>
+<a name="122"><span class="lineNum">     122 </span>        [<span class="branchNoExec" title="Branch 0 was not executed"> # </span><span class="branchCov" title="Branch 1 was taken 52077 times"> + </span>]:<span class="lineCov">      52077 :         require(</span></a>
+<a name="123"><span class="lineNum">     123 </span>                :            :             msg.sender == collateralRegistryAddress || borrowerOperationsAddresses[msg.sender]</a>
+<a name="124"><span class="lineNum">     124 </span>                :            :                 || troveManagerAddresses[msg.sender] || stabilityPoolAddresses[msg.sender],</a>
+<a name="125"><span class="lineNum">     125 </span>                :            :             &quot;Bold: Caller is neither CR nor BorrowerOperations nor TroveManager nor StabilityPool&quot;</a>
+<a name="126"><span class="lineNum">     126 </span>                :            :         );</a>
+<a name="127"><span class="lineNum">     127 </span>                :            :     }</a>
+<a name="128"><span class="lineNum">     128 </span>                :            : </a>
+<a name="129"><span class="lineNum">     129 </span>                :            :     function _requireCallerIsStabilityPool() internal view {</a>
+<a name="130"><span class="lineNum">     130 </span>        [<span class="branchNoExec" title="Branch 0 was not executed"> # </span><span class="branchCov" title="Branch 1 was taken 73824 times"> + </span>]:<span class="lineCov">      73824 :         require(stabilityPoolAddresses[msg.sender], &quot;Bold: Caller is not the StabilityPool&quot;);</span></a>
+<a name="131"><span class="lineNum">     131 </span>                :            :     }</a>
+<a name="132"><span class="lineNum">     132 </span>                :            : }</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="https://github.com/linux-test-project/lcov" target="_parent">LCOV version 1.0</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>
