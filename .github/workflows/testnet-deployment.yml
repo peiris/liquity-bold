@@ -27,54 +27,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy-contracts:
-    if: false # Contracts can no longer be deployed to Erigon dev chain because it doesn't support recent hardforks
-    name: Deploy contracts
-    runs-on: ubuntu-latest
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3.0.0
-        with:
-          version: 8
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: ".node-version"
-          cache: "pnpm"
-          cache-dependency-path: "pnpm-lock.yaml"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: ./contracts
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: ${{ env.FOUNDRY_VERSION }}
-
-      - name: Run deployment tool
-        working-directory: ./contracts
-        run: ./deploy liquity-testnet --debug --verify
-        timeout-minutes: 10
-        env:
-          DEPLOYER: ${{ secrets.DEPLOYER }}
-
-      - name: Upload deployment context
-        uses: actions/upload-artifact@v4
-        with:
-          name: deployment-context
-          path: ./contracts/deployment-context-latest.json
-
   deploy-app:
     name: Deploy app
     runs-on: ubuntu-latest
-    needs: deploy-contracts
     if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
     env:
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
